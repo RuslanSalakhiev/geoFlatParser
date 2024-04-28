@@ -1,10 +1,22 @@
 from bs4 import BeautifulSoup
 import re
+import logging
+from datetime import datetime, timedelta
 from selenium import webdriver
-import time
+from selenium.webdriver.support.ui import WebDriverWait
+
+# Set up logging
+logging.basicConfig(
+    filename='app.log',
+    filemode='a',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Include timestamp
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO
+)
 
 
 def transliterate_georgian(text):
+    # Map of Georgian characters to Latin characters
     transliteration_map = {
         'ა': 'a', 'ბ': 'b', 'გ': 'g', 'დ': 'd', 'ე': 'e',
         'ვ': 'v', 'ზ': 'z', 'თ': 't', 'ი': 'i', 'კ': 'k',
@@ -15,68 +27,96 @@ def transliterate_georgian(text):
         'ხ': 'kh', 'ჯ': 'j', 'ჰ': 'h'
     }
 
-    # Translate each letter using the map
+    # Replace each Georgian letter with its Latin counterpart
     translated_text = ''.join(transliteration_map.get(letter, letter) for letter in text)
     return translated_text
 
 
 def clean_address(text):
+    # Remove the word 'kucha' from the address text
     result = text.replace('kucha', '')
+    result = result.replace(' k.', '')
     return result
 
 
 def get_text(card, selector, default=''):
+    # Use BeautifulSoup to select a single element by CSS selector and return its text, or a default if not found
     element = card.select_one(selector)
     return element.text.strip() if element else default
 
 
 def transliterate_and_clean(card, selector, default=''):
+    # Helper function to extract text using a selector, transliterate from Georgian, and clean address text
     text = get_text(card, selector, default)
     return clean_address(transliterate_georgian(text))
 
 
-url = 'https://www.myhome.ge/en/s/iyideba-bina-Tbilisi/?Keyword=Vake-Saburtalo&AdTypeID=1&PrTypeID=1&cities=1&districts=111.28.30.38.39.40.41.42.43.44.45.46.47.101&regions=4&CardView=2&FCurrencyID=1&FPriceFrom=50000&FPriceTo=120000&AreaSizeID=1&AreaSizeFrom=30&AreaSizeTo=60&RoomNums=1.2&Page=1'
-driver = webdriver.Chrome()
-driver.get(url)
-time.sleep(10)
-html_content = driver.page_source
+def parse(init_url):
+    # Initialize the Chrome WebDriver
+    driver = webdriver.Chrome()
+    data = []
+    page = 1
+    actual_data = True
+    logging.info('Start parsing')
 
-catalog_xml = BeautifulSoup(html_content, 'lxml')
+    while actual_data:
+        logging.info(f'Page - {page}')
+        # Navigate to the given URL
+        url = init_url + '&Page=' + str(page)
+        driver.get(url)
+        driver.implicitly_wait(10)
 
-# find cards on the page
-url_pattern = re.compile(r'^https://www.myhome.ge/en/pr/\d+[^ ]*')
-all_cards = catalog_xml.findAll('a', href=url_pattern)
+        WebDriverWait(driver, 10).until(
+            lambda driver: driver.execute_script('return document.readyState') == 'complete'
+        )
 
-data = []
+        # Extract the source HTML of the page
+        html_content = driver.page_source
+        # Parse the HTML content using BeautifulSoup
+        catalog_xml = BeautifulSoup(html_content, 'lxml')
+        # Define a regex pattern for URLs of property listings
+        url_pattern = re.compile(r'^https://www.myhome.ge/en/pr/\d+[^ ]*')
+        # Find all link elements that match the URL pattern
+        all_cards = catalog_xml.findAll('a', href=url_pattern)
 
-# html =  """
-# <a class="outline-none group relative flex h-[200px] w-full overflow-hidden rounded-xl border border-gray-20 py-4 pl-4 transition-all duration-500 lg:hover:shadow-devCard" href="https://www.myhome.ge/en/pr/17150252/Newly-finished-apartment-for-sale/" target="_blank"><div class="relative h-full w-full min-w-[200px] max-w-[200px] overflow-hidden rounded-lg"><div class="relative z-10 h-full w-full"><div class="swiper swiper-virtual swiper-initialized swiper-horizontal swiper-watch-progress relative h-full"><div class="swiper-wrapper" style="transform: translate3d(0px, 0px, 0px);"><div class="swiper-slide relative z-10 lg:!pointer-events-none swiper-slide-visible swiper-slide-active" data-swiper-slide-index="0" style="left: 0px; width: 200px;"><img alt="building" class="border-transparent object-cover h-full w-full" loading="lazy" sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" src="https://static.my.ge/myhome/photos/2/5/2/0/5/thumbs/17150252_1.jpg?v=13"/><div class="absolute left-0 top-0 h-full w-full bg-black/50 hidden z-20 cursor-pointer"><div class="flex flex-1 flex-col items-center justify-center"><svg class="h16 w-16 fill-white" fill="none" viewbox="0 0 64 64"><path clip-rule="evenodd" d="M20.2289 9.5621C21.2291 8.56191 22.5857 8 24.0002 8H40.0002C41.4147 8 42.7712 8.56191 43.7714 9.5621C44.7716 10.5623 45.3335 11.9188 45.3335 13.3333C45.3335 14.0406 45.6144 14.7189 46.1145 15.219C46.6146 15.719 47.2929 16 48.0002 16H50.6668C52.7886 16 54.8234 16.8429 56.3237 18.3431C57.824 19.8434 58.6668 21.8783 58.6668 24V48C58.6668 50.1217 57.824 52.1566 56.3237 53.6569C54.8234 55.1571 52.7886 56 50.6668 56H13.3335C11.2118 56 9.17693 55.1571 7.67664 53.6569C6.17635 52.1566 5.3335 50.1217 5.3335 48V24C5.3335 21.8783 6.17635 19.8434 7.67664 18.3431C9.17693 16.8429 11.2118 16 13.3335 16H16.0002C16.7074 16 17.3857 15.719 17.8858 15.219C18.3859 14.7189 18.6668 14.0406 18.6668 13.3333C18.6668 11.9188 19.2287 10.5623 20.2289 9.5621ZM40.0002 13.3333L24.0002 13.3333C24.0002 15.4551 23.1573 17.4899 21.657 18.9902C20.1567 20.4905 18.1219 21.3333 16.0002 21.3333H13.3335C12.6263 21.3333 11.948 21.6143 11.4479 22.1144C10.9478 22.6145 10.6668 23.2928 10.6668 24V48C10.6668 48.7072 10.9478 49.3855 11.4479 49.8856C11.948 50.3857 12.6263 50.6667 13.3335 50.6667H50.6668C51.3741 50.6667 52.0523 50.3857 52.5524 49.8856C53.0525 49.3855 53.3335 48.7072 53.3335 48V24C53.3335 23.2928 53.0525 22.6145 52.5524 22.1144C52.0523 21.6143 51.3741 21.3333 50.6668 21.3333H48.0002C45.8784 21.3333 43.8436 20.4905 42.3433 18.9902C40.843 17.4899 40.0002 15.4551 40.0002 13.3333Z" fill="white" fill-rule="evenodd"></path><path clip-rule="evenodd" d="M24.4577 27.1242C26.4581 25.1238 29.1712 24 32.0002 24C34.8291 24 37.5422 25.1238 39.5426 27.1242C41.543 29.1246 42.6668 31.8377 42.6668 34.6667C42.6668 37.4956 41.543 40.2087 39.5426 42.2091C37.5422 44.2095 34.8291 45.3333 32.0002 45.3333C29.1712 45.3333 26.4581 44.2095 24.4577 42.2091C22.4573 40.2087 21.3335 37.4956 21.3335 34.6667C21.3335 31.8377 22.4573 29.1246 24.4577 27.1242ZM32.0002 29.3333C30.5857 29.3333 29.2291 29.8952 28.2289 30.8954C27.2287 31.8956 26.6668 33.2522 26.6668 34.6667C26.6668 36.0812 27.2287 37.4377 28.2289 38.4379C29.2291 39.4381 30.5857 40 32.0002 40C33.4147 40 34.7712 39.4381 35.7714 38.4379C36.7716 37.4377 37.3335 36.0812 37.3335 34.6667C37.3335 33.2522 36.7716 31.8956 35.7714 30.8954C34.7712 29.8952 33.4147 29.3333 32.0002 29.3333Z" fill="white" fill-rule="evenodd"></path></svg><span class="mt-2 text-sm text-white">+5 ფოტო</span></div></div></div><div class="swiper-slide relative z-10 lg:!pointer-events-none swiper-slide-next" data-swiper-slide-index="1" style="left: 0px; width: 200px;"><img alt="building" class="border-transparent object-cover h-full w-full" loading="lazy" sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" src="https://static.my.ge/myhome/photos/2/5/2/0/5/thumbs/17150252_2.jpg?v=13"/><div class="absolute left-0 top-0 h-full w-full bg-black/50 hidden z-20 cursor-pointer"><div class="flex flex-1 flex-col items-center justify-center"><svg class="h16 w-16 fill-white" fill="none" viewbox="0 0 64 64"><path clip-rule="evenodd" d="M20.2289 9.5621C21.2291 8.56191 22.5857 8 24.0002 8H40.0002C41.4147 8 42.7712 8.56191 43.7714 9.5621C44.7716 10.5623 45.3335 11.9188 45.3335 13.3333C45.3335 14.0406 45.6144 14.7189 46.1145 15.219C46.6146 15.719 47.2929 16 48.0002 16H50.6668C52.7886 16 54.8234 16.8429 56.3237 18.3431C57.824 19.8434 58.6668 21.8783 58.6668 24V48C58.6668 50.1217 57.824 52.1566 56.3237 53.6569C54.8234 55.1571 52.7886 56 50.6668 56H13.3335C11.2118 56 9.17693 55.1571 7.67664 53.6569C6.17635 52.1566 5.3335 50.1217 5.3335 48V24C5.3335 21.8783 6.17635 19.8434 7.67664 18.3431C9.17693 16.8429 11.2118 16 13.3335 16H16.0002C16.7074 16 17.3857 15.719 17.8858 15.219C18.3859 14.7189 18.6668 14.0406 18.6668 13.3333C18.6668 11.9188 19.2287 10.5623 20.2289 9.5621ZM40.0002 13.3333L24.0002 13.3333C24.0002 15.4551 23.1573 17.4899 21.657 18.9902C20.1567 20.4905 18.1219 21.3333 16.0002 21.3333H13.3335C12.6263 21.3333 11.948 21.6143 11.4479 22.1144C10.9478 22.6145 10.6668 23.2928 10.6668 24V48C10.6668 48.7072 10.9478 49.3855 11.4479 49.8856C11.948 50.3857 12.6263 50.6667 13.3335 50.6667H50.6668C51.3741 50.6667 52.0523 50.3857 52.5524 49.8856C53.0525 49.3855 53.3335 48.7072 53.3335 48V24C53.3335 23.2928 53.0525 22.6145 52.5524 22.1144C52.0523 21.6143 51.3741 21.3333 50.6668 21.3333H48.0002C45.8784 21.3333 43.8436 20.4905 42.3433 18.9902C40.843 17.4899 40.0002 15.4551 40.0002 13.3333Z" fill="white" fill-rule="evenodd"></path><path clip-rule="evenodd" d="M24.4577 27.1242C26.4581 25.1238 29.1712 24 32.0002 24C34.8291 24 37.5422 25.1238 39.5426 27.1242C41.543 29.1246 42.6668 31.8377 42.6668 34.6667C42.6668 37.4956 41.543 40.2087 39.5426 42.2091C37.5422 44.2095 34.8291 45.3333 32.0002 45.3333C29.1712 45.3333 26.4581 44.2095 24.4577 42.2091C22.4573 40.2087 21.3335 37.4956 21.3335 34.6667C21.3335 31.8377 22.4573 29.1246 24.4577 27.1242ZM32.0002 29.3333C30.5857 29.3333 29.2291 29.8952 28.2289 30.8954C27.2287 31.8956 26.6668 33.2522 26.6668 34.6667C26.6668 36.0812 27.2287 37.4377 28.2289 38.4379C29.2291 39.4381 30.5857 40 32.0002 40C33.4147 40 34.7712 39.4381 35.7714 38.4379C36.7716 37.4377 37.3335 36.0812 37.3335 34.6667C37.3335 33.2522 36.7716 31.8956 35.7714 30.8954C34.7712 29.8952 33.4147 29.3333 32.0002 29.3333Z" fill="white" fill-rule="evenodd"></path></svg><span class="mt-2 text-sm text-white">+5 ფოტო</span></div></div></div></div><div class="swiper-pagination flex justify-center items-center gap-2 !bottom-3 !z-[30] px-4 swiper-pagination-bullets swiper-pagination-horizontal"><span class="bullet rounded-2xl w-2 h-2 lg:w-1/5 lg:h-1 flex border-0 bg-white opacity-0 group-hover:opacity-90 transition-all duration-200 !lg:w-1/5 !lg:h-1 !bg-primary-90"></span><span class="bullet rounded-2xl w-2 h-2 lg:w-1/5 lg:h-1 flex border-0 bg-white opacity-0 group-hover:opacity-90 transition-all duration-200"></span><span class="bullet rounded-2xl w-2 h-2 lg:w-1/5 lg:h-1 flex border-0 bg-white opacity-0 group-hover:opacity-90 transition-all duration-200"></span><span class="bullet rounded-2xl w-2 h-2 lg:w-1/5 lg:h-1 flex border-0 bg-white opacity-0 group-hover:opacity-90 transition-all duration-200"></span></div><div class="absolute right-0 top-0 z-10 h-10 w-full opacity-100"><div class="flex justify-between"><div class="ml-3 mt-3 flex gap-1.5"><div class="SuperVipIcon--r6l- undefined"><svg fill="none" height="28" viewbox="0 0 62 28" width="62"><rect fill="#FD541A" height="28" rx="8" width="62"></rect><path d="M16.536 8.374C18.818 8.374 20.372 9.578 20.414 11.594L18.216 11.706C18.188 10.824 17.572 10.25 16.578 10.25C15.584 10.25 15.024 10.768 15.024 11.51C15.024 12.308 15.64 12.49 17.082 12.826C19.21 13.358 20.638 14.086 20.638 15.948C20.638 18.174 18.888 19.154 16.774 19.154C14.366 19.154 12.616 17.964 12.588 15.794L14.786 15.682C14.814 16.634 15.654 17.278 16.774 17.278C17.754 17.278 18.426 16.928 18.426 16.074C18.426 15.276 17.684 15.038 16.27 14.688C14.38 14.212 12.826 13.61 12.826 11.58C12.826 9.858 14.044 8.374 16.536 8.374ZM21.7892 14.1H26.2132V16.004H21.7892V14.1ZM34.0855 8.528H36.4515L32.0415 19H30.2215L25.8115 8.528H28.1635L31.1315 15.668L34.0855 8.528ZM37.4396 8.528H39.6096V19H37.4396V8.528ZM41.6232 8.528H46.1592C48.1472 8.528 49.5332 9.746 49.5332 11.902C49.5332 14.058 48.1472 15.276 46.1592 15.276H43.7932V19H41.6232V8.528ZM45.8792 10.432H43.7792V13.358H45.8792C46.7192 13.358 47.3352 12.854 47.3352 11.902C47.3352 10.95 46.7192 10.432 45.8792 10.432Z" fill="white"></path></svg></div></div></div></div><div class="pointer-events-none absolute left-0 top-0 z-10 block h-full w-full marker:xl:hidden"><div class="flex lg:hidden h-full items-center justify-between px-3"><div class="pointer-events-auto flex h-14 w-14 cursor-pointer items-center transition-opacity duration-300 md:h-auto md:w-auto opacity-0 swiper-button-disabled"><div class="flex h-8 w-8 cursor-default items-center justify-center rounded-full bg-[#00000073] backdrop-blur-sm lg:cursor-pointer rotate-180"><svg class="h-[11px] w-[7px] fill-white" fill="none" viewbox="0 0 7 11"><path d="M0.310934 0.287919C0.725513 -0.0959732 1.39522 -0.0959732 1.80979 0.287919L6.68907 4.80604C7.10364 5.18993 7.10364 5.81007 6.68907 6.19396L1.80979 10.7121C1.39522 11.096 0.725513 11.096 0.310934 10.7121C-0.103645 10.3282 -0.103645 9.70805 0.310934 9.32416L4.43546 5.49508L0.310934 1.67584C-0.103645 1.29195 -0.0930142 0.661969 0.310934 0.287919Z" fill="inherit"></path></svg></div></div><div class="pointer-events-auto flex h-14 w-14 cursor-pointer items-center justify-end transition-opacity duration-300 md:h-auto md:w-auto opacity-100"><div class="flex h-8 w-8 cursor-default items-center justify-center rounded-full bg-[#00000073] backdrop-blur-sm lg:cursor-pointer"><svg class="h-[11px] w-[7px] fill-white" fill="none" viewbox="0 0 7 11"><path d="M0.310934 0.287919C0.725513 -0.0959732 1.39522 -0.0959732 1.80979 0.287919L6.68907 4.80604C7.10364 5.18993 7.10364 5.81007 6.68907 6.19396L1.80979 10.7121C1.39522 11.096 0.725513 11.096 0.310934 10.7121C-0.103645 10.3282 -0.103645 9.70805 0.310934 9.32416L4.43546 5.49508L0.310934 1.67584C-0.103645 1.29195 -0.0930142 0.661969 0.310934 0.287919Z" fill="inherit"></path></svg></div></div></div></div><div class="pointer-events-none absolute left-0 top-0 z-10 block h-full w-full bg-card-overlay"></div><div class="absolute left-0 top-0 z-[1] hidden h-full w-full cursor-pointer md:flex"><div class="left-0 top-0 z-10 h-full flex-1 flex"></div><div class="left-0 top-0 z-10 h-full flex-1 flex"></div><div class="left-0 top-0 z-10 h-full flex-1 flex"></div><div class="left-0 top-0 z-10 h-full flex-1 flex"></div><div class="left-0 top-0 z-10 h-full flex-1 hidden"></div><div class="left-0 top-0 z-10 h-full flex-1 hidden"></div><div class="left-0 top-0 z-10 h-full flex-1 hidden"></div><div class="left-0 top-0 z-10 h-full flex-1 hidden"></div><div class="left-0 top-0 z-10 h-full flex-1 hidden"></div></div><div class="absolute right-0 top-0 z-10 h-12 w-3/4"><div class="flex items-center justify-end gap-2"><button class="hide-card--r6m- mt-3.5 opacity-100 md:opacity-0 transition-opacity duration-300 group-hover:opacity-100"><svg class="fill-white w-7 h-7" fill="none" height="28" viewbox="0 0 28 28" width="28"><path d="M14.0009 16.3333C14.0476 16.3333 14.0943 16.3217 14.1409 16.3217L11.0959 13.2767C11.0959 13.3233 11.0843 13.37 11.0843 13.4167C11.0843 15.0267 12.3909 16.3333 14.0009 16.3333ZM15.1793 10.745L16.6726 12.2383C16.3693 11.5733 15.8443 11.0367 15.1793 10.745ZM24.2909 13.4167C22.3659 9.485 18.4226 7 14.0009 7C13.2076 7 12.4376 7.105 11.6793 7.25667L12.7526 8.33C13.1609 8.225 13.5693 8.16667 14.0009 8.16667C16.8943 8.16667 19.2509 10.5233 19.2509 13.4167C19.2509 13.8483 19.1809 14.2567 19.0876 14.665L21.4793 17.0567C22.6226 16.0533 23.5909 14.8283 24.2909 13.4167ZM14.0009 19.8333C15.1093 19.8333 16.1826 19.6817 17.2093 19.3783L16.0659 18.235C15.4359 18.515 14.7359 18.6667 14.0009 18.6667C11.1076 18.6667 8.75094 16.31 8.75094 13.4167C8.75094 12.6817 8.9026 11.9817 9.17094 11.3517L7.12927 9.29833C5.70594 10.36 4.5276 11.7483 3.71094 13.405C5.63594 17.3367 9.57927 19.8333 14.0009 19.8333Z" fill="black" fill-opacity="0.15"></path><path d="M13.9993 7C18.421 7 22.3643 9.485 24.2894 13.4167C23.601 14.84 22.6327 16.065 21.4777 17.0567L23.1227 18.7017C24.7444 17.2667 26.0277 15.47 26.8327 13.4167C24.8144 8.295 19.8327 4.66667 13.9993 4.66667C12.5177 4.66667 11.0943 4.9 9.75268 5.33167L11.6777 7.25667C12.436 7.105 13.206 7 13.9993 7ZM16.6593 12.2383L19.0744 14.6533C19.1677 14.2567 19.2377 13.8367 19.2377 13.405C19.2493 10.5117 16.8927 8.16667 13.9993 8.16667C13.5677 8.16667 13.1594 8.23667 12.751 8.33L15.166 10.745C15.8427 11.0367 16.3677 11.5733 16.6593 12.2383ZM2.34435 4.515L5.47102 7.64167C3.56935 9.135 2.06435 11.1183 1.16602 13.4167C3.18435 18.5383 8.16602 22.1667 13.9993 22.1667C15.7727 22.1667 17.476 21.8283 19.0394 21.21L23.0294 25.2L24.6744 23.555L3.98935 2.85834L2.34435 4.515ZM11.0943 13.265L14.1393 16.31C14.0927 16.3217 14.046 16.3333 13.9993 16.3333C12.3893 16.3333 11.0827 15.0267 11.0827 13.4167C11.0827 13.3583 11.0943 13.3233 11.0943 13.265ZM7.12768 9.29834L9.16935 11.34C8.90102 11.9817 8.74935 12.6817 8.74935 13.4167C8.74935 16.31 11.106 18.6667 13.9993 18.6667C14.7344 18.6667 15.4344 18.515 16.0644 18.2467L17.2077 19.39C16.181 19.67 15.1077 19.8333 13.9993 19.8333C9.57768 19.8333 5.63435 17.3483 3.70935 13.4167C4.52602 11.7483 5.71602 10.3717 7.12768 9.29834Z"></path></svg></button><button class="group/favorites-btn cursor-default lg:cursor-pointer favorites--r6n- flex items-center justify-center mr-3 mt-3.5"><svg class="h-6 w-6 origin-center stroke-[3] transition-all duration-200 group-active/favorites-btn:scale-75 fill-[#22222233] stroke-white" viewbox="0 0 32 32"><path d="M16 28c7-4.73 14-10 14-17a6.98 6.98 0 0 0-7-7c-1.8 0-3.58.68-4.95 2.05L16 8.1l-2.05-2.05a6.98 6.98 0 0 0-9.9 0A6.98 6.98 0 0 0 2 11c0 7 7 12.27 14 17z"></path></svg></button></div></div></div></div></div><div class="w-full px-5"><div class="break-all"><h4 class="text-secondary-100 title-text--r6o- title-text--r6o- w-fit font-tbcx-medium text-[15px] line-clamp-1 h-full leading-[21px]" color="black">Newly finished apartment for sale</h4></div><div class="mt-3.5 flex h-5 items-center gap-2.5 mt-4"><div class="flex items-center overflow-hidden font-tbcx-medium gap-1"><span class="text-base truncate text-secondary-100">86,600</span></div><div class="z-10 self-baseline"><button aria-checked="true" class="relative inline-flex h-5 w-10 cursor-default items-center rounded-full border border-gray-50 bg-gray-5 lg:cursor-pointer" data-headlessui-state="checked" id="headlessui-switch-:r6p:" role="switch" tabindex="0" type="button"><i class="absolute left-0 z-10 pl-[5px]"><svg class="transition-colors fill-secondary-100" fill="none" height="10" viewbox="0 0 8 10" width="8"><path d="M1.2831 5.5748C1.2831 7.43654 2.4927 8.57596 4.2111 8.57596H7.1583V9.40001H1.0527V8.637H2.1951C1.0815 8.1385 0.399902 6.98891 0.399902 5.51376C0.399902 3.65203 1.3887 2.33966 2.8191 1.87168V0.600006H3.3855V1.73943C3.5871 1.70891 3.7983 1.68856 4.0095 1.68856C4.2303 1.68856 4.4415 1.70891 4.6431 1.73943V0.600006H5.2095V1.88186C6.6207 2.34983 7.5999 3.68255 7.5999 5.59515H6.7167C6.7167 4.07931 6.1119 3.13318 5.2095 2.72625V5.59515H4.6431V2.54313C4.4415 2.50243 4.2303 2.48209 4.0095 2.48209C3.7983 2.48209 3.5871 2.50243 3.3855 2.54313V5.59515H2.8191V2.71608C1.8975 3.12301 1.2831 4.05897 1.2831 5.5748Z"></path></svg></i><i class="absolute right-0 z-10 pr-1.5"><svg class="transition-colors fill-white" fill="none" height="10" viewbox="0 0 5 10" width="5"><path d="M2.33353 9.40001V0.600006H2.86686V9.40001H2.33353ZM4.12865 3.24001C4.08963 2.89167 3.93136 2.62126 3.65385 2.42876C3.37635 2.23626 3.03597 2.14001 2.63272 2.14001C2.33786 2.14001 2.07987 2.19042 1.85873 2.29126C1.63976 2.39209 1.46849 2.53074 1.34491 2.70719C1.2235 2.88365 1.1628 3.08417 1.1628 3.30876C1.1628 3.49667 1.20507 3.65823 1.28963 3.79344C1.37635 3.92636 1.48692 4.03751 1.62133 4.12688C1.75575 4.21396 1.89667 4.28615 2.0441 4.34344C2.19152 4.39844 2.32702 4.44313 2.4506 4.47751L3.12702 4.67001C3.30047 4.71813 3.49342 4.78459 3.70589 4.86938C3.92052 4.95417 4.1254 5.0699 4.32052 5.21657C4.51781 5.36094 4.68041 5.54657 4.80833 5.77344C4.93624 6.00032 5.0002 6.27876 5.0002 6.60876C5.0002 6.98917 4.90589 7.33292 4.71727 7.64001C4.53082 7.94709 4.25765 8.19115 3.89776 8.37219C3.54003 8.55324 3.10534 8.64375 2.59369 8.64375C2.11673 8.64375 1.70372 8.5624 1.35467 8.39969C1.00778 8.23698 0.734613 8.01011 0.535155 7.71907C0.337865 7.42803 0.226212 7.09001 0.200195 6.70501H1.03272C1.0544 6.97084 1.13895 7.19084 1.28637 7.36501C1.43597 7.53688 1.62459 7.66521 1.85223 7.75001C2.08204 7.83251 2.32919 7.87375 2.59369 7.87375C2.90155 7.87375 3.17797 7.82105 3.42296 7.71563C3.66795 7.60792 3.86198 7.45896 4.00507 7.26876C4.14816 7.07626 4.21971 6.85167 4.21971 6.59501C4.21971 6.36126 4.15792 6.17105 4.03434 6.02438C3.91076 5.87771 3.74816 5.75855 3.54654 5.66688C3.34491 5.57521 3.12702 5.49501 2.89288 5.42626L2.07337 5.17876C1.55304 5.02063 1.14112 4.7949 0.837594 4.50157C0.534071 4.20824 0.382309 3.82438 0.382309 3.35001C0.382309 2.95584 0.483122 2.61209 0.684748 2.31876C0.888542 2.02313 1.16171 1.79396 1.50426 1.63126C1.84898 1.46626 2.2338 1.38376 2.65873 1.38376C3.088 1.38376 3.46957 1.46511 3.80345 1.62782C4.13732 1.78824 4.40182 2.00824 4.59694 2.28782C4.79423 2.5674 4.8983 2.8848 4.90914 3.24001H4.12865Z"></path></svg></i><span class="translate-x-[19px] inline-block h-5 w-5 transform rounded-full bg-primary-100 transition-all duration-300"></span></button></div><div class="flex items-center"><span class="text-sm text-secondary-title-100 font-tbcx-regular"><span class="text-secondary-70">$</span></span><div class="truncate text-sm text-secondary-70"><span class="text-sm text-secondary-title-100 font-tbcx-regular">1,650 / m² price</span></div></div></div><div class="h-5 mt-3"><div class="flex h-full gap-4 text-sm text-secondary-70"><div class="group flex items-center gap-2 facilities--r6q--0"><div class="flex items-center gap-2 whitespace-nowrap transition-all hover:text-secondary-100"><svg class="fill-current" fill="#646464" height="16" viewbox="0 0 16 16" width="16"><g clip-path="url(#clip0_7004_36145)"><path clip-rule="evenodd" d="M12 1H4C2.34315 1 1 2.34315 1 4V12C1 13.6569 2.34315 15 4 15H12C13.6569 15 15 13.6569 15 12V4C15 2.34315 13.6569 1 12 1ZM4 0C1.79086 0 0 1.79086 0 4V12C0 14.2091 1.79086 16 4 16H12C14.2091 16 16 14.2091 16 12V4C16 1.79086 14.2091 0 12 0H4Z" fill-rule="evenodd"></path><path d="M4 13V12.0526H5.65789V9.92105H7.78947V7.78947H9.92105V5.65789H12.0526V4H13V6.60526H10.8684V8.73684H8.73684V10.8684H6.60526V13H4Z"></path></g><defs><clippath id="clip0_7004_36145"><rect fill="white" height="16" width="16"></rect></clippath></defs></svg><span class="text-sm text-secondary-title-100 font-tbcx-regular">3/5</span></div></div><div class="group flex items-center gap-2 facilities--r6q--1"><div class="flex items-center gap-2 whitespace-nowrap transition-all hover:text-secondary-100"><svg class="fill-current" fill="none" height="16" viewbox="0 0 12 16" width="12"><g clip-path="url(#clip0_6771_10034)"><path d="M3.6 9.14286C3.91826 9.14286 4.22348 9.02245 4.44853 8.80812C4.67357 8.59379 4.8 8.30311 4.8 8C4.8 7.6969 4.67357 7.40621 4.44853 7.19188C4.22348 6.97755 3.91826 6.85714 3.6 6.85714C3.28174 6.85714 2.97652 6.97755 2.75147 7.19188C2.52643 7.40621 2.4 7.6969 2.4 8C2.4 8.30311 2.52643 8.59379 2.75147 8.80812C2.97652 9.02245 3.28174 9.14286 3.6 9.14286ZM2.4 0C1.76348 0 1.15303 0.240816 0.702944 0.66947C0.252856 1.09812 0 1.67951 0 2.28571V13.7143C0 14.3205 0.252856 14.9019 0.702944 15.3305C1.15303 15.7592 1.76348 16 2.4 16H9.6C10.2365 16 10.847 15.7592 11.2971 15.3305C11.7471 14.9019 12 14.3205 12 13.7143V2.28571C12 1.67951 11.7471 1.09812 11.2971 0.66947C10.847 0.240816 10.2365 0 9.6 0H2.4ZM1.2 2.28571C1.2 1.98261 1.32643 1.69192 1.55147 1.47759C1.77652 1.26327 2.08174 1.14286 2.4 1.14286H9.6C9.91826 1.14286 10.2235 1.26327 10.4485 1.47759C10.6736 1.69192 10.8 1.98261 10.8 2.28571V13.7143C10.8 14.0174 10.6736 14.3081 10.4485 14.5224C10.2235 14.7367 9.91826 14.8571 9.6 14.8571H2.4C2.08174 14.8571 1.77652 14.7367 1.55147 14.5224C1.32643 14.3081 1.2 14.0174 1.2 13.7143V2.28571Z"></path></g><defs><clippath id="clip0_6771_10034"><rect fill="white" height="16" width="12"></rect></clippath></defs></svg><span class="text-sm text-secondary-title-100 font-tbcx-regular">2</span></div></div><div class="group flex items-center gap-2 facilities--r6q--2"><div class="flex items-center gap-2 whitespace-nowrap transition-all hover:text-secondary-100"><svg class="fill-current" fill="none" height="13" viewbox="0 0 17 13" width="17"><path d="M15 4.67078V1.59368C15 1.17101 14.8325 0.76565 14.5343 0.466777C14.2361 0.167905 13.8317 0 13.41 0L3.58 0C3.16096 0 2.75908 0.166849 2.46277 0.463842C2.16646 0.760835 2 1.16364 2 1.58365V4.67078C1.46119 4.72219 0.959943 4.96999 0.5913 5.3672C0.222658 5.76441 0.0122585 6.2834 0 6.82575L0 8.93061C8.51164e-05 9.48987 0.203004 10.03 0.570954 10.4505C0.938904 10.8709 1.44679 11.1429 2 11.2159V12.4988C2 12.6318 2.05268 12.7592 2.14645 12.8532C2.24021 12.9472 2.36739 13 2.5 13C2.63261 13 2.75979 12.9472 2.85355 12.8532C2.94732 12.7592 3 12.6318 3 12.4988V11.0254H14V12.4888C14 12.6217 14.0527 12.7492 14.1464 12.8432C14.2402 12.9372 14.3674 12.99 14.5 12.99C14.6326 12.99 14.7598 12.9372 14.8536 12.8432C14.9473 12.7492 15 12.6217 15 12.4888V11.2359C15.5507 11.1698 16.0582 10.9039 16.4266 10.4884C16.7951 10.0729 16.9991 9.53662 17 8.98072V6.82575C16.9877 6.2834 16.7773 5.76441 16.4087 5.3672C16.0401 4.96999 15.5388 4.72219 15 4.67078ZM3.58 1.00231H13.41C13.5638 1.00231 13.7114 1.06356 13.8201 1.17258C13.9289 1.28161 13.99 1.42947 13.99 1.58365V5.01157H13V2.69622C13 2.5128 12.9273 2.33689 12.7979 2.20719C12.6685 2.07749 12.493 2.00463 12.31 2.00463H9.69C9.507 2.00463 9.3315 2.07749 9.2021 2.20719C9.0727 2.33689 9 2.5128 9 2.69622V5.01157H8V2.69622C8 2.5128 7.9273 2.33689 7.7979 2.20719C7.6685 2.07749 7.493 2.00463 7.31 2.00463H4.69C4.59939 2.00463 4.50966 2.02251 4.42595 2.05727C4.34223 2.09203 4.26617 2.14297 4.2021 2.20719C4.13802 2.27141 4.0872 2.34765 4.05252 2.43156C4.01785 2.51547 4 2.6054 4 2.69622V5.01157H3V1.58365C3 1.42947 3.06111 1.28161 3.16988 1.17258C3.27865 1.06356 3.42617 1.00231 3.58 1.00231ZM12 5.01157H10V3.00694H12V5.01157ZM7 5.01157H5V3.00694H7V5.01157ZM14.83 10.0231H2.17C2.01635 10.0231 1.86421 9.9928 1.72226 9.93386C1.58031 9.87493 1.45133 9.78855 1.34269 9.67965C1.23404 9.57076 1.14786 9.44148 1.08906 9.2992C1.03026 9.15692 1 9.00443 1 8.85042V7.18658C1 6.87556 1.12327 6.57728 1.34269 6.35736C1.5621 6.13743 1.8597 6.01388 2.17 6.01388H14.83C15.1403 6.01388 15.4379 6.13743 15.6573 6.35736C15.8767 6.57728 16 6.87556 16 7.18658V8.85042C16 9.00443 15.9697 9.15692 15.9109 9.2992C15.8521 9.44148 15.766 9.57076 15.6573 9.67965C15.5487 9.78855 15.4197 9.87493 15.2777 9.93386C15.1358 9.9928 14.9836 10.0231 14.83 10.0231Z"></path></svg><span class="text-sm text-secondary-title-100 font-tbcx-regular">1</span></div></div><div class="group flex items-center gap-2 facilities--r6q--3"><div class="flex items-center gap-2 whitespace-nowrap transition-all hover:text-secondary-100"><svg class="fill-current" fill="none" height="14" viewbox="0 0 14 14" width="14"><path d="M2.71429 8.71429H1V13H5.28571V11.2857H2.71429V8.71429ZM1 5.28571H2.71429V2.71429H5.28571V1H1V5.28571ZM11.2857 11.2857H8.71429V13H13V8.71429H11.2857V11.2857ZM8.71429 1V2.71429H11.2857V5.28571H13V1H8.71429Z"></path></svg><span class="text-sm text-secondary-title-100 font-tbcx-regular">52.5 m²</span></div></div></div></div><div class="mt-3 line-clamp-1"><div class="text-ellipses text-secondary-70"><p class="text-secondary-title-100 title-description--r6r- font-tbcx-regular text-sm title-description--r6r-">ა. პოლიტკოვსკაიას ქუჩა (ჯიქია)</p></div></div><div class="mt-3"><div class="h-px w-full bg-gray-20"></div><div class="flex justify-between break-all h-6 mt-3"><span class="text-sm font-tbcx-regular pace--r6s- pace--r6s- line-clamp-1 text-ellipsis text-secondary-70 max-w-[60%]">საბურთალო</span><div class="flex h-full gap-2 text-secondary-70"><span class="text-sm text-secondary-title-100 font-tbcx-regular">12 Apr 12:53</span></div></div></div></div></a>
-# """
-#
-# card = BeautifulSoup(html, 'html.parser').find('a')
+        logging.info(f'Total cards - {len(all_cards)}')
 
+        for card in all_cards:
 
-for card in all_cards:
-    entity = {
-        "link": card.get('href'),
-        "date": get_text(card,
-                         "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > div > span"),
-        "district": transliterate_and_clean(card,
-                                            "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > span"),
-        "price": get_text(card,
-                          "div.w-full.px-5 > div.mt-3\.5.flex.h-5.items-center.gap-2\.5.mt-4 > div.flex.items-center.overflow-hidden.font-tbcx-medium.gap-1 > span"),
-        "floor": get_text(card,
-                          "div.w-full.px-5 > div.h-5.mt-3 > div > div.group.flex.items-center.gap-2> div.flex.items-center.gap-2.whitespace-nowrap.transition-all.hover\:text-secondary-100 > span"),
-        "rooms": get_text(card,
-                          "div.w-full.px-5 > div.h-5.mt-3 > div > div.group.flex.items-center.gap-2 > div > span"),
-        "bedrooms": get_text(card,
-                             "div.w-full.px-5 > div.h-5.mt-3 > div > div.group.flex.items-center.gap-2 > div > span"),
-        "size": get_text(card,
-                         "div.w-full.px-5 > div.h-5.mt-3 > div > div.group.flex.items-center.gap-2 > div > span"),
-        "address": transliterate_and_clean(card, "div.w-full.px-5 > div.mt-3.line-clamp-1 > div > p")
-    }
+            link = card.get('href')
+            card_date = get_text(card,
+                                 "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > div > span")
 
-    data.append(entity)
+            is_vip_badge =  bool(card.select('[class^="SuperVipIcon"], [class^="VipPlusIcon"],  [class^="VipIcon"]'))
 
+            # check for today data
+            date = datetime.strptime(card_date + " " + str(datetime.now().year), '%d %b %H:%M %Y')
+            today = datetime.today()
+            start_date = today - timedelta(days=1)
+            logging.info(f"Link - {link}, Date - {date},  {'VIP' if is_vip_badge else ''}, ")
 
-driver.quit()
+            if date < start_date and not is_vip_badge:
+                actual_data = False
+                break
+
+            # Extract various pieces of data for each property listing
+            entity = {
+                "link": link,
+                "date": card_date,
+                "district": transliterate_and_clean(card,
+                                                    "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > span"),
+                "price": get_text(card,
+                                  "div.w-full.px-5 > div.mt-3\.5.flex.h-5.items-center.gap-2\.5.mt-4 > div.flex.items-center.overflow-hidden.font-tbcx-medium.gap-1 > span"),
+                "floor": get_text(card,
+                                  "div.w-full.px-5 > div.h-5.mt-3 > div > div.group.flex.items-center.gap-2> div.flex.items-center.gap-2.whitespace-nowrap.transition-all.hover\:text-secondary-100 > span"),
+                "rooms": get_text(card, "div.w-full.px-5 > div.h-5.mt-3 > div > div:nth-child(2)> div > span"),
+                "bedrooms": get_text(card, "div.w-full.px-5 > div.h-5.mt-3 > div > div:nth-child(3) > div > span"),
+                "size": get_text(card, "div.w-full.px-5 > div.h-5.mt-3 > div > div:nth-child(4) > div > span"),
+                "address": transliterate_and_clean(card, "div.w-full.px-5 > div.mt-3.line-clamp-1 > div > p")
+            }
+
+            data.append(entity)
+
+        page += 1
+    logging.info('End of parsing')
+    return data
