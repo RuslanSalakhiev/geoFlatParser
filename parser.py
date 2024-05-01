@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
+from config import url_pattern,parse_days_count
 
 # Set up logging
 logging.basicConfig(
@@ -75,9 +76,9 @@ def parse(init_url):
         # Parse the HTML content using BeautifulSoup
         catalog_xml = BeautifulSoup(html_content, 'lxml')
         # Define a regex pattern for URLs of property listings
-        url_pattern = re.compile(r'^https://www.myhome.ge/en/pr/\d+[^ ]*')
+        regex_url_pattern = re.compile(url_pattern)
         # Find all link elements that match the URL pattern
-        all_cards = catalog_xml.findAll('a', href=url_pattern)
+        all_cards = catalog_xml.findAll('a', href=regex_url_pattern)
 
         logging.info(f'Total cards - {len(all_cards)}')
 
@@ -92,7 +93,7 @@ def parse(init_url):
             # check for today data
             date = datetime.strptime(card_date + " " + str(datetime.now().year), '%d %b %H:%M %Y')
             today = datetime.today()
-            start_date = today - timedelta(days=1)
+            start_date = today - timedelta(days=parse_days_count)
             logging.info(f"Link - {link}, Date - {date},  {'VIP' if is_vip_badge else ''}, ")
 
             if date < start_date and not is_vip_badge:
@@ -100,6 +101,10 @@ def parse(init_url):
                 break
 
             # Extract various pieces of data for each property listing
+
+            images = card.findAll('img')
+            images_list = [img.get('src') for img in images if img.get('src') is not None]
+
             entity = {
                 "link": link,
                 "date": card_date,
@@ -112,7 +117,8 @@ def parse(init_url):
                 "rooms": get_text(card, "div.w-full.px-5 > div.h-5.mt-3 > div > div:nth-child(2)> div > span"),
                 "bedrooms": get_text(card, "div.w-full.px-5 > div.h-5.mt-3 > div > div:nth-child(3) > div > span"),
                 "size": get_text(card, "div.w-full.px-5 > div.h-5.mt-3 > div > div:nth-child(4) > div > span"),
-                "address": transliterate_and_clean(card, "div.w-full.px-5 > div.mt-3.line-clamp-1 > div > p")
+                "address": transliterate_and_clean(card, "div.w-full.px-5 > div.mt-3.line-clamp-1 > div > p"),
+                "images_list": images_list
             }
 
             data.append(entity)
@@ -120,3 +126,4 @@ def parse(init_url):
         page += 1
     logging.info('End of parsing')
     return data
+

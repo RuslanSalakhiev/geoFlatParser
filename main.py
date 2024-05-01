@@ -1,7 +1,30 @@
+import threading
+import time
 from parser import parse
-from db import check_db, update_db
-url = 'https://www.myhome.ge/en/s/iyideba-bina-Tbilisi/?Keyword=Vake-Saburtalo&AdTypeID=1&PrTypeID=1&cities=1&districts=111.28.30.38.39.40.41.42.43.44.45.46.47.101&regions=4&CardView=2&FCurrencyID=1&FPriceFrom=50000&FPriceTo=120000&AreaSizeID=1&AreaSizeFrom=30&AreaSizeTo=60&RoomNums=1.2'
+from db import update_flats, create_tables, get_requests
+import asyncio
+import schedule
 
-data = parse(url)
-update_db(data)
-# check_db()
+
+def parser_job():
+    urls = get_requests()
+    for url_id, url in urls:
+        data = parse(url)
+        asyncio.run(update_flats(data, url_id))
+
+
+def run_parser():
+    schedule.every().day.at("21:00").do(parser_job)
+    while True:
+        schedule.run_pending()
+        time.sleep(60)  # sleep for a minute to avoid excessive CPU use
+
+
+def main():
+    create_tables()
+    parser_thread = threading.Thread(target=run_parser)
+    parser_thread.start()
+
+
+if __name__ == "__main__":
+    main()
