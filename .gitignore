@@ -163,3 +163,4 @@ cython_debug/
 chromedriver
 *.db
 config.py
+.DS_Store
