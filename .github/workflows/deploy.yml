@@ -20,7 +20,7 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         source: "."
-        target: "."
+        target: "geoFlatParser"
 
     - name: Execute PM2 Restart on the Server
       uses: appleboy/ssh-action@master
