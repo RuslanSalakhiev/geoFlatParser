@@ -18,7 +18,7 @@ jobs:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASS }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
         source: "."
         target: "."
 
@@ -28,7 +28,7 @@ jobs:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASS }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
           cd geoFlatParser
           pm2 start main --interpreter=./env/bin/python
