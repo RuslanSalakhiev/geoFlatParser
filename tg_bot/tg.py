@@ -7,7 +7,13 @@ from config import bot_token, chat_id
 bot = Bot(token=bot_token)
 
 
-async def send_message_to_telegram(item):
+async def send_message_to_telegram(message):
+
+    await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
+    await asyncio.sleep(10)
+
+
+async def send_flat_to_telegram(item):
     message = f"\nDate: {item['date']}" \
               f"\nPrice: {item['price']}" \
               f"\n\nDistrict: {item['district']} " \
@@ -20,8 +26,8 @@ async def send_message_to_telegram(item):
 
     await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
     await asyncio.sleep(10)
-    print(item)
     images = item['images_list']
+    # print('a')
 
     for img in images:
         await send_img_telegram(img)

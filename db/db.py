@@ -2,11 +2,11 @@ import logging
 import json
 import sqlite3
 
-DATABASE_PATH = 'flats.db'
+DATABASE_PATH = '../flats.db'
 
 # Set up logging
 logging.basicConfig(
-    filename='app.log',
+    filename='../app.log',
     filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
@@ -35,12 +35,16 @@ async def update_flats(data, url_id):
                 ''', item)
                 logging.info(f"Inserted in DB: {item['link']}")
                 insert_count += 1
+
+
             else:
                 # Update the 'date' of the existing record where the link matches
                 c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
                           (item['date'], item['price'], item['link']))
                 logging.info(f"Updated existing link: {item['link']}")
                 update_count += 1
+
+
 
             # await send_message_to_telegram(item)
         conn.commit()  # Commit all changes to the database

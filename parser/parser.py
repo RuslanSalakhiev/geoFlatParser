@@ -8,7 +8,7 @@ from config import url_pattern,parse_days_count
 
 # Set up logging
 logging.basicConfig(
-    filename='app.log',
+    filename='../app.log',
     filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Include timestamp
     datefmt='%Y-%m-%d %H:%M:%S',
