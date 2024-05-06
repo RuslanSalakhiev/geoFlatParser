@@ -7,6 +7,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from config import chrome_path, url_pattern, parse_days_count
 from database.db import get_requests, update_flats
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 
 # Set up logging
 logging.basicConfig(
@@ -26,10 +28,10 @@ def get_chrome_headless():
     chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
     chrome_options.add_argument("--disable-gpu")  # Applicable for GPUs
     chrome_options.add_argument("--window-size=1920x1080")  # Standard window size for most desktop screens
-    chrome_options.binary_location = chrome_path  # Update this path
+    # chrome_options.binary_location = chrome_path  # Update this path
 
     # Set the executable path and initialize the driver
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
     return driver
 
