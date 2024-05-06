@@ -1,3 +1,5 @@
+import time
+
 from bs4 import BeautifulSoup
 import re
 import logging
@@ -6,11 +8,13 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from config import url_pattern, parse_days_count
-from database.db import get_requests, update_flats
+from database.db import get_new_flats, get_requests, update_flats
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Set up logging
+from tg_bot.tg import send_message_to_telegram
+
 logging.basicConfig(
     filename='parser.log',
     filemode='a',
@@ -157,4 +161,7 @@ def run_parser():
         data = parse_url(url)
         update_flats(data, url_id)
 
-        # send_message_to_telegram('a')
+        new_flats = get_new_flats(url_id)
+        send_message_to_telegram('a')
+        # for flat in new_flats:
+        #     send_message_to_telegram(flat['link'])

@@ -1,6 +1,7 @@
 import logging
 import json
 import sqlite3
+from datetime import datetime
 
 DATABASE_PATH = '../flats.db'
 
@@ -44,9 +45,6 @@ def update_flats(data, url_id):
                 logging.info(f"Updated existing link: {item['link']}")
                 update_count += 1
 
-
-
-            # await send_message_to_telegram(item)
         conn.commit()  # Commit all changes to the database
 
     except Exception as e:
@@ -141,3 +139,32 @@ def get_requests():
     result = [(entry[0], entry[1]) for entry in entries]
     conn.close()
     return result
+
+
+def get_new_flats(request_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    # This line changes the row factory method to return dictionaries instead of tuples
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get today's date in the format "02 May"
+    today_date = datetime.now().strftime("%d %b")  # Formats the date as 'Day MonthName'
+    # Define the SQL query to fetch flats that are not hidden, match the request_id, and have today's date
+    query = """
+      SELECT * FROM flats 
+      WHERE hide = 0 
+      AND request_id = ?
+      """
+    cursor.execute(query, (request_id,))
+    # Fetch all results
+    entries = cursor.fetchall()
+
+    today_date = datetime.now().strftime("%d %b")  # Formats the date as 'Day MonthName'
+
+    # Filter entries where date matches today's date
+    flats_list = [dict(row) for row in entries if
+                  datetime.strptime(row['date'], "%d %b %H:%M").strftime("%d %b") == today_date]
+    # Convert rows to dictionaries
+
+    conn.close()
+    return flats_list
