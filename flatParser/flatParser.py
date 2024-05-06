@@ -162,6 +162,6 @@ def run_parser():
         update_flats(data, url_id)
 
         new_flats = get_new_flats(url_id)
-        send_message_to_telegram('a')
+        # send_message_to_telegram('a')
         # for flat in new_flats:
         #     send_message_to_telegram(flat['link'])
