@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
-from config import chrome_path, url_pattern, parse_days_count
+from config import url_pattern, parse_days_count
 from database.db import get_requests, update_flats
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
@@ -111,7 +111,7 @@ def parse_url(init_url):
             card_date = get_text(card,
                                  "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > div > span")
 
-            is_vip_badge =  bool(card.select('[class^="SuperVipIcon"], [class^="VipPlusIcon"],  [class^="VipIcon"]'))
+            is_vip_badge = bool(card.select('[class^="SuperVipIcon"], [class^="VipPlusIcon"],  [class^="VipIcon"]'))
 
             # check for today data
             date = datetime.strptime(card_date + " " + str(datetime.now().year), '%d %b %H:%M %Y')
@@ -158,5 +158,3 @@ def run_parser():
         update_flats(data, url_id)
 
         # send_message_to_telegram('a')
-
-
