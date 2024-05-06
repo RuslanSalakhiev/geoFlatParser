@@ -6,14 +6,14 @@ DATABASE_PATH = '../flats.db'
 
 # Set up logging
 logging.basicConfig(
-    filename='../app.log',
+    filename='parser.log',
     filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO)
 
 
-async def update_flats(data, url_id):
+def update_flats(data, url_id):
     # Establish a connection to the SQLite database, creating the file if it doesn't already exist
     conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
@@ -128,7 +128,7 @@ def create_tables():
 
 
 def get_requests():
-    conn = sqlite3.connect(DATABASE_PATH)  # Replace 'your_database_name.db' with your database file name
+    conn = sqlite3.connect(DATABASE_PATH)  # Replace 'your_database_name.database' with your database file name
     cursor = conn.cursor()
 
     # Define the SQL query to fetch all URLs

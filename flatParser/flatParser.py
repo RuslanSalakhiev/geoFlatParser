@@ -6,9 +6,13 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from config import url_pattern,parse_days_count
 
+
+from database.db import get_requests, update_flats
+from tg_bot.tg import send_message_to_telegram
+
 # Set up logging
 logging.basicConfig(
-    filename='../app.log',
+    filename='parser.log',
     filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Include timestamp
     datefmt='%Y-%m-%d %H:%M:%S',
@@ -52,8 +56,7 @@ def transliterate_and_clean(card, selector, default=''):
     return clean_address(transliterate_georgian(text))
 
 
-def parse(init_url):
-    # Initialize the Chrome WebDriver
+def parse_url(init_url):
     driver = webdriver.Chrome()
     data = []
     page = 1
@@ -126,4 +129,14 @@ def parse(init_url):
         page += 1
     logging.info('End of parsing')
     return data
+
+
+def run_parser():
+    urls = get_requests()
+    for url_id, url in urls:
+        data = parse_url(url)
+        update_flats(data, url_id)
+
+        # send_message_to_telegram('a')
+
 
