@@ -4,11 +4,12 @@ import logging
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
-from config import url_pattern,parse_days_count
-
-
+from selenium.webdriver.chrome.options import Options
+from config import chrome_path, url_pattern, parse_days_count
 from database.db import get_requests, update_flats
-from tg_bot.tg import send_message_to_telegram
+
+chrome_options = Options()
+chrome_options.binary_location = chrome_path  # Update this path
 
 # Set up logging
 logging.basicConfig(
@@ -57,7 +58,7 @@ def transliterate_and_clean(card, selector, default=''):
 
 
 def parse_url(init_url):
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(options=chrome_options)
     data = []
     page = 1
     actual_data = True
