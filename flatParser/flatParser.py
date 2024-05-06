@@ -8,9 +8,6 @@ from selenium.webdriver.chrome.options import Options
 from config import chrome_path, url_pattern, parse_days_count
 from database.db import get_requests, update_flats
 
-chrome_options = Options()
-chrome_options.binary_location = chrome_path  # Update this path
-
 # Set up logging
 logging.basicConfig(
     filename='parser.log',
@@ -19,6 +16,22 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO
 )
+
+
+def get_chrome_headless():
+    # Set up Chrome options
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Ensures Chrome runs in headless mode
+    chrome_options.add_argument("--no-sandbox")  # Bypass OS security model
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
+    chrome_options.add_argument("--disable-gpu")  # Applicable for GPUs
+    chrome_options.add_argument("--window-size=1920x1080")  # Standard window size for most desktop screens
+    chrome_options.binary_location = chrome_path  # Update this path
+
+    # Set the executable path and initialize the driver
+    driver = webdriver.Chrome(options=chrome_options)
+
+    return driver
 
 
 def transliterate_georgian(text):
@@ -58,7 +71,11 @@ def transliterate_and_clean(card, selector, default=''):
 
 
 def parse_url(init_url):
-    driver = webdriver.Chrome(options=chrome_options)
+    # chrome_options = Options()
+    # chrome_options.binary_location = chrome_path  # Update this path
+    # driver = webdriver.Chrome(options=chrome_options)
+    driver = get_chrome_headless()
+
     data = []
     page = 1
     actual_data = True
