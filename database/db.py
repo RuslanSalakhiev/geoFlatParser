@@ -3,7 +3,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-DATABASE_PATH = '../flats.db'
+DATABASE_PATH = 'flats.db'
 
 # Set up logging
 logging.basicConfig(
