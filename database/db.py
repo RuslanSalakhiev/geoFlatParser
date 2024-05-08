@@ -175,13 +175,13 @@ def get_average_ppm(days):
     sql = f"""
     SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
     FROM flats
-    WHERE date >= date('now',  '{daysShift}')
+    WHERE date >= date('now',  ?)
     """
 
     try:
         # Execute the query
 
-        cursor.execute(sql)
+        cursor.execute(sql, (daysShift,))
         # Fetch the result
         result = cursor.fetchone()
         return result[0] if result[0] is not None else 0
