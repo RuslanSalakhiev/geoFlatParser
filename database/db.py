@@ -171,7 +171,7 @@ def get_new_flats(request_id):
 
     # Filter entries where date matches today's date
     flats_list = [dict(row) for row in entries if
-                  datetime.strptime(row['date'], "%d %b %H:%M").strftime("%d %b") == today_date]
+                  datetime.strptime(row['date'], '%Y-%m-%d %H:%M:%S').strftime("%d %b") == today_date]
     # Convert rows to dictionaries
 
     conn.close()
