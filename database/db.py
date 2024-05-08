@@ -194,7 +194,6 @@ def get_average_ppm(days):
 
 
 def hide_flat(flat_id):
-    print(flat_id)
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     sql = f"""
@@ -203,7 +202,7 @@ def hide_flat(flat_id):
 
     try:
         # Execute the query
-        cursor.execute(sql,  flat_id)
+        cursor.execute(sql,  (flat_id,))
         conn.commit()
         return 'Hidden'
     except Exception as e:
