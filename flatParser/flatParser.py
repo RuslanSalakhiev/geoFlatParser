@@ -1,5 +1,3 @@
-import time
-
 from bs4 import BeautifulSoup
 import re
 import logging
@@ -130,7 +128,7 @@ def parse_url(init_url):
             # Extract various pieces of data for each property listing
 
             images = card.findAll('img')
-            images_list = [img.get('src') for img in images if img.get('src') is not None]
+            images_list = [img.get('src').replace('thumbs', 'large') for img in images if img.get('src') is not None]
 
             entity = {
                 "link": link,
@@ -161,7 +159,3 @@ def run_parser():
         data = parse_url(url)
         update_flats(data, url_id)
 
-        new_flats = get_new_flats(url_id)
-        # send_message_to_telegram('a')
-        # for flat in new_flats:
-        #     send_message_to_telegram(flat['link'])

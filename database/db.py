@@ -146,7 +146,6 @@ def get_new_flats(request_id):
     # This line changes the row factory method to return dictionaries instead of tuples
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-
     # Get today's date in the format "02 May"
     today_date = datetime.now().strftime("%d %b")  # Formats the date as 'Day MonthName'
     # Define the SQL query to fetch flats that are not hidden, match the request_id, and have today's date
@@ -168,3 +167,29 @@ def get_new_flats(request_id):
 
     conn.close()
     return flats_list
+
+
+def get_average_ppm(days):
+    conn = sqlite3.connect('flats.db')
+    cursor = conn.cursor()
+    daysShift = f"-{days} days"
+    # SQL to calculate the average price per meter for flats posted in the last 30 days
+    sql = f"""
+    SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
+    FROM flats
+    WHERE date >= date('now',  '{daysShift}')
+    """
+
+    try:
+        # Execute the query
+
+        cursor.execute(sql)
+        # Fetch the result
+        result = cursor.fetchone()
+        return result[0] if result[0] is not None else 0
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        conn.close()
