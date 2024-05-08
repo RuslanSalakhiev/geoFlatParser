@@ -20,14 +20,14 @@ async def sleep_until():
 
 async def bot_schedule():
     while True:
-
+        await sleep_until()
         urls = get_requests()
         for (url_id, url) in urls:
             new_flats = get_new_flats(url_id)
             for flat in new_flats:
                 await run_bot(flat)
 
-        await sleep_until()
+
 
 if __name__ == "__main__":
     asyncio.run(bot_schedule())
