@@ -2,7 +2,7 @@ import json
 import logging
 from telegram import Bot
 import asyncio
-from config import bot_token, chat_id
+from config import bot_token, chat_id, vm_ip, vm_port
 from database.db import get_average_ppm
 
 bot = Bot(token=bot_token)
@@ -32,6 +32,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90):
     price = float(item['price'].replace(',', ''))
     ppm = round(price / size )
 
+    hide_link = f"http://{vm_ip}:{vm_port}/update?id={item['id']}"
     message = f"\nDate: {item['date']}" \
               f"\nPrice: {item['price']}" \
               f"\nPrice per Meter: {ppm} " \
@@ -45,7 +46,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90):
               f"\nBedrooms: {item['bedrooms']}" \
               f"\nFloor: {item['floor']}" \
               f"\n" \
-              f"\n\n[Link]({item['link']}), [Hide]({item['link']})"\
+              f"\n\n[Link]({item['link']}), [Hide]({hide_link})"\
 
     await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
     await asyncio.sleep(10)
