@@ -168,7 +168,7 @@ def get_new_flats(request_id):
 
 
 def get_average_ppm(days):
-    conn = sqlite3.connect('flats.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     daysShift = f"-{days} days"
     # SQL to calculate the average price per meter for flats posted in the last 30 days
@@ -188,6 +188,27 @@ def get_average_ppm(days):
 
     except Exception as e:
         print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        conn.close()
+
+
+def hide_flat(flat_id):
+    print(flat_id)
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    sql = f"""
+    UPDATE flats SET hide = 1 WHERE id = ?
+    """
+
+    try:
+        # Execute the query
+        cursor.execute(sql,  flat_id)
+        conn.commit()
+        return 'Hidden'
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Error'
     finally:
         # Close the connection
         conn.close()
