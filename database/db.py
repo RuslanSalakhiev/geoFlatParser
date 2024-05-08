@@ -146,8 +146,6 @@ def get_new_flats(request_id):
     # This line changes the row factory method to return dictionaries instead of tuples
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    # Get today's date in the format "02 May"
-    today_date = datetime.now().strftime("%d %b")  # Formats the date as 'Day MonthName'
     # Define the SQL query to fetch flats that are not hidden, match the request_id, and have today's date
     query = """
       SELECT * FROM flats 
