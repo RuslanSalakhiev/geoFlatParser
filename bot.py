@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from database.db import get_new_flats, get_requests
 from tg_bot.tg import run_bot
 
-async def sleep_until_21():
+async def sleep_until():
     # Current time
     now = datetime.now()
     # Time for today at 21:00
@@ -20,12 +20,13 @@ async def sleep_until_21():
 
 async def bot_schedule():
     while True:
+        await sleep_until()
         urls = get_requests()
         for (url_id, url) in urls:
             new_flats = get_new_flats(url_id)
             for flat in new_flats:
                 await run_bot(flat)
-        await sleep_until_21()
+
 
 
 if __name__ == "__main__":
