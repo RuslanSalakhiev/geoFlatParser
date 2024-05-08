@@ -30,18 +30,29 @@ def update_flats(data, url_id):
                 # Insert new record into the database since the link is unique
                 item['request_id'] = url_id
                 item['images'] = json.dumps(item["images_list"])
+
+                current_year = datetime.now().year
+                dt = datetime.strptime(item['date'], '%d %b %H:%M')
+                dt = dt.replace(year=current_year)
+                item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+
                 c.execute('''
                 INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images ) 
-                VALUES (:link, :date,:date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images  )
+                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images  )
                 ''', item)
                 logging.info(f"Inserted in DB: {item['link']}")
                 insert_count += 1
 
-
             else:
+
+                current_year = datetime.now().year
+                dt = datetime.strptime(item['date'], '%d %b %H:%M')
+                dt = dt.replace(year=current_year)
+                item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+
                 # Update the 'date' of the existing record where the link matches
                 c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
-                          (item['date'], item['price'], item['link']))
+                          (item['parsed_date'], item['price'], item['link']))
                 logging.info(f"Updated existing link: {item['link']}")
                 update_count += 1
 
