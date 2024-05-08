@@ -1,12 +1,9 @@
 import json
 import logging
-
-from telegram import Bot, InputMediaPhoto
-
+from telegram import Bot
 import asyncio
-
 from config import bot_token, chat_id
-from database.db import get_average_ppm, get_new_flats, get_requests
+from database.db import get_average_ppm
 
 bot = Bot(token=bot_token)
 
@@ -20,10 +17,7 @@ async def send_message_to_telegram(message):
 def format_difference(num1, num2):
     # Calculate the difference
     difference = round(num1 - num2)
-
-
-    emoji = "🟢"
-
+    arrow = "🟢"
     if difference > 0:
         arrow = "🔴"
     elif difference < 0:
@@ -69,6 +63,5 @@ async def send_img_telegram(img):
 async def run_bot(item):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
-    #await send_message_to_telegram('a')
     logging.info(f'Send Message - {item["link"]}')
     await send_flat_to_telegram(item,ppm30,ppm90)

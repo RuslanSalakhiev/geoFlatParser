@@ -2,8 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from database.db import get_new_flats, get_requests
-from tg_bot.tg import run_bot
-
+from tg_bot.tg import hide_flat_callback, run_bot
 
 async def sleep_until_21():
     # Current time
