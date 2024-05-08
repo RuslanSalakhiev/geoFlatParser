@@ -37,7 +37,7 @@ jobs:
         script: |
           cd geoFlatParser
           source env/bin/activate
-          pip install requirements.txt
+          pip install -r requirements.txt
           pm2 delete all
           pm2 start parser.py  --interpreter=./env/bin/python
           pm2 start bot.py  --interpreter=./env/bin/python
