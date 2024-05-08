@@ -1,4 +1,5 @@
 import json
+import logging
 
 from telegram import Bot, InputMediaPhoto
 
@@ -32,7 +33,7 @@ def format_difference(num1, num2):
     return formatted_difference
 
 
-async def send_flat_to_telegram(item,ppm30,ppm90):
+async def send_flat_to_telegram(item, ppm30, ppm90):
     size = float(item['size'].split()[0])
     price = float(item['price'].replace(',', ''))
     ppm = round(price / size )
@@ -69,4 +70,5 @@ async def run_bot(item):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
     #await send_message_to_telegram('a')
+    logging.info(f'Send Message - {item["link"]}')
     await send_flat_to_telegram(item,ppm30,ppm90)
