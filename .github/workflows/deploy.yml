@@ -36,5 +36,5 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
           cd geoFlatParser
-          pm2 start parser --interpreter=./env/bin/python
-          pm2 start bot --interpreter=./env/bin/python
+          pm2 start parser.py --interpreter=./env/bin/python
+          pm2 start bot.py --interpreter=./env/bin/python
