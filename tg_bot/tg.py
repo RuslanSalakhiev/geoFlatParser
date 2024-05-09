@@ -1,9 +1,12 @@
 import json
 import logging
+import time
+
 from telegram import Bot, InputMediaPhoto
 import asyncio
 from config import bot_token, chat_id, vm_ip, vm_port
 from database.db import get_average_ppm
+import requests
 
 bot = Bot(token=bot_token)
 
@@ -51,12 +54,26 @@ async def send_flat_to_telegram(item, ppm30, ppm90):
     images = item['images']
     images_list = json.loads(images)
 
-    media = []
-    for image in images_list:
-        media.append(InputMediaPhoto(media=image))
+    base_url = images_list[0].rsplit('_', 1)[0] + '_'
+    extension = images_list[0].split('.')[-1]
 
-    await bot.send_media_group(chat_id=chat_id, caption=message, parse_mode='markdown', media=media)
+    media = []
+    i = 1
+    while True:
+        url = f"{base_url}{i}.{extension}"
+        response = requests.head(url)
+        if response.status_code != 200:
+            break
+        media.append(InputMediaPhoto(media=url.replace('large','thumbs')))
+        i += 1
+        time.sleep(2)
+
+    if media:
+        await bot.send_media_group(chat_id=chat_id, caption=message, parse_mode='markdown', media=media)
+    else:
+        await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
     await asyncio.sleep(10)
+
 
 
 async def run_bot(item):

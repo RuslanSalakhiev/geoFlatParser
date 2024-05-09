@@ -2,7 +2,8 @@ import asyncio
 from datetime import datetime, timedelta
 
 from database.db import get_new_flats, get_requests
-from tg_bot.tg import run_bot
+from tg_bot.tg import run_bot, run_test
+
 
 async def sleep_until():
     # Current time
@@ -20,13 +21,14 @@ async def sleep_until():
 
 async def bot_schedule():
     while True:
-        await sleep_until()
+        # await sleep_until()
         urls = get_requests()
         for (url_id, url) in urls:
             new_flats = get_new_flats(url_id)
             for flat in new_flats:
                 await run_bot(flat)
 
+        # await run_test()
 
 
 if __name__ == "__main__":
