@@ -1,6 +1,6 @@
 import json
 import logging
-from telegram import Bot
+from telegram import Bot, InputMediaPhoto
 import asyncio
 from config import bot_token, chat_id, vm_ip, vm_port
 from database.db import get_average_ppm
@@ -33,33 +33,31 @@ async def send_flat_to_telegram(item, ppm30, ppm90):
     ppm = round(price / size )
 
     hide_link = f"http://{vm_ip}:{vm_port}/update?id={item['id']}"
-    message = f"\nDate: {item['date']}" \
-              f"\nPrice: {item['price']}" \
-              f"\nPrice per Meter: {ppm} " \
-              f"\nPPM vs avg-30: {format_difference(ppm,ppm30)} " \
-              f"\nPPM vs avg-90: {format_difference(ppm,ppm90)} " \
+    message = f"\n*Date*: {item['date']}" \
+              f"\n*Price*: {item['price']}" \
+              f"\n*Price per Meter*: {ppm} " \
+              f"\n*PPM vs avg-30*: {format_difference(ppm,ppm30)} " \
+              f"\n*PPM vs avg-90*: {format_difference(ppm,ppm90)} " \
               f"\n" \
-              f"\n\nDistrict: {item['district']} " \
-              f"\naddress: {item['address']}" \
-              f"\n\nRooms: {item['rooms']}" \
-              f"\nSize: {item['size']}"\
-              f"\nBedrooms: {item['bedrooms']}" \
-              f"\nFloor: {item['floor']}" \
+              f"\n\n*District*: {item['district']} " \
+              f"\n*address*: {item['address']}" \
+              f"\n\n*Rooms*: {item['rooms']}" \
+              f"\n*Size*: {item['size']}"\
+              f"\n*Bedrooms*: {item['bedrooms']}" \
+              f"\n*Floor*: {item['floor']}" \
               f"\n" \
-              f"\n\n[Link]({item['link']}), [Hide]({hide_link})"\
+              f"\n[Link]({item['link']}), [Hide]({hide_link})"\
 
-    await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
-    await asyncio.sleep(10)
     images = item['images']
     images_list = json.loads(images)
 
+    media = []
     for image in images_list:
-        await send_img_telegram(image)
+        media.append(InputMediaPhoto(media=image))
 
+    await bot.send_media_group(chat_id=chat_id, caption=message, parse_mode='markdown', media=media)
+    await asyncio.sleep(10)
 
-async def send_img_telegram(img):
-    await bot.send_message(chat_id=chat_id, text=f"[source]({img})", parse_mode='markdown')
-    await asyncio.sleep(5)
 
 async def run_bot(item):
     ppm30 = get_average_ppm('30')
