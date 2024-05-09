@@ -21,7 +21,7 @@ async def sleep_until():
 
 async def bot_schedule():
     while True:
-        # await sleep_until()
+        await sleep_until()
         urls = get_requests()
         for (url_id, url) in urls:
             new_flats = get_new_flats(url_id)
