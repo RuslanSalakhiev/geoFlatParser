@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from database.db import get_new_flats, get_requests
-from tg_bot.tg import run_bot, run_test
+from tg_bot.tg import run_bot
 
 
 async def sleep_until():

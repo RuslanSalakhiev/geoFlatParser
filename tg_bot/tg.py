@@ -81,3 +81,18 @@ async def run_bot(item):
     ppm90 = get_average_ppm('90')
     logging.info(f'Send Message - {item["link"]}')
     await send_flat_to_telegram(item,ppm30,ppm90)
+
+
+async def run_test():
+
+    media = []
+
+    # media_1 = InputMediaPhoto(media='https://static.my.ge/myhome/photos/7/9/1/1/8/thumbs/18181197_1.jpg?v=8')
+    media_2 = InputMediaPhoto(media='https://static.my.ge/myhome/photos/8/2/9/2/4/thumbs/17942928_3.jpg?v=7')
+
+    # media_3 = InputMediaPhoto(media='https://static.my.ge/myhome/photos/4/5/2/6/8/large/18086254_1.jpg?v=10')
+    # media.append(media_1)
+    media.append(media_2)
+    # media.append(media_3)
+    await bot.send_media_group(chat_id=chat_id,caption="text", media=media)
+    await asyncio.sleep(5)
