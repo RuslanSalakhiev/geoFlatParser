@@ -5,7 +5,7 @@ from flatParser.flatParser import run_parser
 
 
 def parser_schedule():
-    schedule.every().day.at("16:00").do(run_parser)
+    schedule.every().day.at("8:00").do(run_parser)
     # schedule.every(30).seconds.do(run_parser)
     while True:
         schedule.run_pending()

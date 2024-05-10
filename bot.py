@@ -9,7 +9,7 @@ async def sleep_until():
     # Current time
     now = datetime.now()
     # Time for today at 21:00
-    target_time = now.replace(hour=18, minute=15, second=0, microsecond=0)
+    target_time = now.replace(hour=8, minute=15, second=0, microsecond=0)
     # If it's already past 21:00, set the target time for 21:00 the next day
     if now >= target_time:
         target_time += timedelta(days=1)
