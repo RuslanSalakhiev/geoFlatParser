@@ -5,7 +5,8 @@ import time
 from telegram import Bot, InputMediaPhoto
 import asyncio
 from config import bot_token, chat_id, vm_ip, vm_port
-from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, get_tg_message_by_id
+from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, get_tg_message_by_id, \
+    update_tg_message_in_db
 import requests
 
 bot = Bot(token=bot_token)
@@ -55,7 +56,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
            f"\n" \
            f"\n<a href='{item['link']}'>Link</a>" \
            f"\n" \
-           f"\n<a href='{hide_link}'>Hide</a>,  <a href='{favorite_link}'>Save</a>,  <a href='{remove_favorite_link}'>Unsave</a>"
+           f"\n<a href='{hide_link}'>Hide</a>"
 
     images = item['images']
     images_list = json.loads(images)
@@ -68,7 +69,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
     while True:
         url = f"{base_url}{i}.{extension}"
         response = requests.head(url)
-        if response.status_code != 200:
+        if response.status_code != 200 or i > 8:
             break
         media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
         i += 1
@@ -81,18 +82,20 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
         message_id = sent_message.message_id
 
     message = {'id': message_id, 'text': text}
-    add_tg_message_to_db(message)
+
+    add_tg_message_to_db(message, hide_link, favorite_link, remove_favorite_link)
     await asyncio.sleep(2)
-    await add_message_id(message_id, hide_link, favorite_link, remove_favorite_link)
+    await add_message_id(message_id)
     await asyncio.sleep(10)
 
 
 async def run_bot(item):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
-    ppmDistrict = get_district_average_ppm(item['district'])
+    ppm_district = get_district_average_ppm(item['district'])
+
     logging.info(f'Send Message - {item["link"]}')
-    await send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict)
+    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district)
 
 
 async def hide_message(message_id):
@@ -108,37 +111,34 @@ async def hide_message(message_id):
 async def add_favorite_tag(message_id):
     initial_text = get_tg_message_by_id(message_id)
 
-    updated_text = f'{initial_text}\n\n #saved⭐ '
+    updated_text = f'{initial_text}\n\n #Saved'
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
                                    caption=updated_text,
                                    parse_mode='HTML')
+    message = {'id': message_id, 'text': updated_text}
+    update_tg_message_in_db(message)
 
 
 async def remove_favorite_tag(message_id):
     initial_text = get_tg_message_by_id(message_id)
 
-    updated_text = initial_text.replace('\n\n #saved⭐ ', '')
+    updated_text = initial_text.replace('\n\n #Saved', '')
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
                                    caption=updated_text,
                                    parse_mode='HTML')
 
+    message = {'id': message_id, 'text': updated_text}
+    update_tg_message_in_db(message)
 
-async def add_message_id(message_id, hide_link, favorite_link, remove_favorite_link):
-    initial_text = get_tg_message_by_id(message_id)
 
-    new_hide_link = hide_link + f"&message_id={message_id}"
-    new_favorite_link = favorite_link + f"&message_id={message_id}"
-    new_remove_favorite_link = remove_favorite_link + f"&message_id={message_id}"
-
-    updated_text = initial_text.replace(hide_link, new_hide_link)
-    updated_text = updated_text.replace(favorite_link, new_favorite_link)
-    updated_text = updated_text.replace(remove_favorite_link, new_remove_favorite_link)
+async def add_message_id(message_id):
+    db_text = get_tg_message_by_id(message_id)
 
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
-                                   caption=updated_text,
+                                   caption=db_text,
                                    parse_mode='HTML')
     await asyncio.sleep(2)
 

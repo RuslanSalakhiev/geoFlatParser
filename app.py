@@ -17,11 +17,11 @@ def create_app():
         item_id = request.args.get('id')
         message_id = request.args.get('message_id')
         if item_id:
-            result = hide_flat(item_id)
+            result = await hide_flat(item_id)
 
             if result == 'ok':
                 result_message = f"<span style='color:green; font-size: 30px'>Hidden</span>"
-                await hide_message(message_id)
+                # await hide_message(message_id)
             else:
                 result_message = f"<span style='color:red; font-size: 30px'>Error</span>"
 

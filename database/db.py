@@ -238,7 +238,7 @@ def get_district_average_ppm(district):
         conn.close()
 
 
-def hide_flat(flat_id):
+async def hide_flat(flat_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     sql = f"""
@@ -258,9 +258,17 @@ def hide_flat(flat_id):
         conn.close()
 
 
-def add_tg_message_to_db(message):
+def add_tg_message_to_db(message,hide_link, favorite_link, remove_favorite_link):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
+
+    new_hide_link = hide_link + f"&message_id={message['id']}"
+    new_favorite_link = favorite_link + f"&message_id={message['id']}"
+    new_remove_favorite_link = remove_favorite_link + f"&message_id={message['id']}"
+
+    message['text'] = message['text'].replace(hide_link, new_hide_link)
+    message['text'] = message['text'].replace(favorite_link, new_favorite_link)
+    message['text'] = message['text'].replace(remove_favorite_link, new_remove_favorite_link)
     try:
         # Execute the query
         cursor.execute('''
@@ -276,6 +284,26 @@ def add_tg_message_to_db(message):
         # Close the connection
         conn.close()
 
+
+def update_tg_message_in_db(message):
+    print("update")
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Execute the update query
+        cursor.execute('''
+                           UPDATE tgmessages
+                           SET message = :text
+                           WHERE id = :id
+                           ''', message)
+
+        conn.commit()
+        logging.info(f"TGMessages: Updated message with ID {message['id']}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        conn.close()
 
 def get_tg_message_by_id(message_id):
     conn = sqlite3.connect(DATABASE_PATH)
