@@ -72,7 +72,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
         if response.status_code != 200 or i > 8:
             break
         media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         i += 1
         time.sleep(2)
     if media:
@@ -81,9 +81,9 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
             add_tg_message_to_db(message, hide_link, favorite_link, remove_favorite_link)
-            await asyncio.sleep(5)
+            await asyncio.sleep(6)
             await add_message_id(message_id)
-            await asyncio.sleep(5)
+            await asyncio.sleep(6)
         except Exception as e:
             print(f"An error occurred while retrieving the message: {e}")
 

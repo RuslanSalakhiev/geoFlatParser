@@ -167,7 +167,7 @@ def get_new_flats(request_id):
     cursor = conn.cursor()
 
     # Calculate yesterday's date in the format 'YYYY-MM-DD'
-    yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday_date = (datetime.now() - timedelta(days=1))
 
     # Update the SQL query to fetch flats that are not hidden, match the request_id,
     # and were added on or after yesterday's date
