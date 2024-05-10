@@ -220,7 +220,7 @@ def get_district_average_ppm(district):
     sql = f"""
     SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
     FROM flats
-    WHERE district = ?
+    WHERE LOWER(district) = LOWER(?)
     """
 
     try:
