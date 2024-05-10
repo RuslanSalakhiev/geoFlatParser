@@ -37,10 +37,8 @@ def create_app():
         result_message = f"<span style='color:green; font-size: 30px'>Saved</span>"
         return result_message
 
-    return app
-
     @app.route('/remove_favorite')
-    async def add_favorite():
+    async def remove_favorite():
         item_id = request.args.get('id')
         message_id = request.args.get('message_id')
         if item_id:

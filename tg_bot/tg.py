@@ -83,7 +83,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
     message = {'id': message_id, 'text': text}
     add_tg_message_to_db(message)
     await asyncio.sleep(2)
-    await add_message_id(message_id, hide_link, favorite_link)
+    await add_message_id(message_id, hide_link, favorite_link, remove_favorite_link)
     await asyncio.sleep(10)
 
 
@@ -108,7 +108,7 @@ async def hide_message(message_id):
 async def add_favorite_tag(message_id):
     initial_text = get_tg_message_by_id(message_id)
 
-    updated_text = f'{initial_text}\n\n #⭐saved '
+    updated_text = f'{initial_text}\n\n #saved⭐ '
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
                                    caption=updated_text,
@@ -118,21 +118,23 @@ async def add_favorite_tag(message_id):
 async def remove_favorite_tag(message_id):
     initial_text = get_tg_message_by_id(message_id)
 
-    updated_text = initial_text.replace('\n\n #⭐saved ', '')
+    updated_text = initial_text.replace('\n\n #saved⭐ ', '')
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
                                    caption=updated_text,
                                    parse_mode='HTML')
 
 
-async def add_message_id(message_id, hide_link, favorite_link):
+async def add_message_id(message_id, hide_link, favorite_link, remove_favorite_link):
     initial_text = get_tg_message_by_id(message_id)
 
     new_hide_link = hide_link + f"&message_id={message_id}"
     new_favorite_link = favorite_link + f"&message_id={message_id}"
+    new_remove_favorite_link = remove_favorite_link + f"&message_id={message_id}"
 
     updated_text = initial_text.replace(hide_link, new_hide_link)
     updated_text = updated_text.replace(favorite_link, new_favorite_link)
+    updated_text = updated_text.replace(remove_favorite_link, new_remove_favorite_link)
 
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
