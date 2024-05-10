@@ -75,18 +75,16 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
         i += 1
         time.sleep(2)
     if media:
-        sent_messages = await bot.send_media_group(chat_id=chat_id, caption=text, parse_mode='html', media=media)
-        message_id = sent_messages[0].message_id
-    else:
-        sent_message = await bot.send_message(chat_id=chat_id, text=text, parse_mode='html')
-        message_id = sent_message.message_id
-
-    message = {'id': message_id, 'text': text}
-
-    add_tg_message_to_db(message, hide_link, favorite_link, remove_favorite_link)
-    await asyncio.sleep(2)
-    await add_message_id(message_id)
-    await asyncio.sleep(10)
+        try:
+            sent_messages = await bot.send_media_group(chat_id=chat_id, caption=text, parse_mode='html', media=media)
+            message_id = sent_messages[0].message_id
+            message = {'id': message_id, 'text': text}
+            add_tg_message_to_db(message, hide_link, favorite_link, remove_favorite_link)
+            await asyncio.sleep(2)
+            await add_message_id(message_id)
+            await asyncio.sleep(10)
+        except Exception as e:
+            print(f"An error occurred while retrieving the message: {e}")
 
 
 async def run_bot(item):
