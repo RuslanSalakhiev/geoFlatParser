@@ -1,8 +1,8 @@
-from flask import Flask,request
+from flask import Flask, request
 
 from config import vm_port
 from database.db import hide_flat
-from tg_bot.tg import hide_message
+from tg_bot.tg import hide_message, add_favorite_tag, remove_favorite_tag
 
 
 def create_app():
@@ -25,6 +25,28 @@ def create_app():
             else:
                 result_message = f"<span style='color:red; font-size: 30px'>Error</span>"
 
+        return result_message
+
+    @app.route('/add_favorite')
+    async def add_favorite():
+        item_id = request.args.get('id')
+        message_id = request.args.get('message_id')
+        if item_id:
+            await add_favorite_tag(message_id)
+
+        result_message = f"<span style='color:green; font-size: 30px'>Saved</span>"
+        return result_message
+
+    return app
+
+    @app.route('/remove_favorite')
+    async def add_favorite():
+        item_id = request.args.get('id')
+        message_id = request.args.get('message_id')
+        if item_id:
+            await remove_favorite_tag(message_id)
+
+        result_message = f"<span style='color:green; font-size: 30px'>Removed</span>"
         return result_message
 
     return app

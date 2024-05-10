@@ -5,14 +5,13 @@ import time
 from telegram import Bot, InputMediaPhoto
 import asyncio
 from config import bot_token, chat_id, vm_ip, vm_port
-from database.db import add_tg_message_to_db, get_average_ppm, get_tg_message_by_id
+from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, get_tg_message_by_id
 import requests
 
 bot = Bot(token=bot_token)
 
 
 async def send_message_to_telegram(message):
-
     await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
     await asyncio.sleep(10)
 
@@ -30,26 +29,33 @@ def format_difference(num1, num2):
     return formatted_difference
 
 
-async def send_flat_to_telegram(item, ppm30, ppm90):
+async def send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict):
     size = float(item['size'].split()[0])
     price = float(item['price'].replace(',', ''))
-    ppm = round(price / size )
+    ppm = round(price / size)
 
     hide_link = f"http://{vm_ip}:{vm_port}/update?id={item['id']}"
+    favorite_link = f"http://{vm_ip}:{vm_port}/add_favorite?id={item['id']}"
+    remove_favorite_link = f"http://{vm_ip}:{vm_port}/remove_favorite?id={item['id']}"
+
     text = f"\n<b>Date</b>: {item['date']}" \
-              f"\n<b>Price</b>: {item['price']}" \
-              f"\n<b>Price per Meter</b>: {ppm} " \
-              f"\n<b>PPM vs *avg-30</b>: {format_difference(ppm,ppm30)} " \
-              f"\n<b>PPM vs avg-90</b>: {format_difference(ppm,ppm90)} " \
-              f"\n" \
-              f"\n\n<b>District</b>: {item['district']} " \
-              f"\n<b>address</b>: {item['address']}" \
-              f"\n\n<b>Rooms</b>: {item['rooms']}" \
-              f"\n<b>Size</b>: {item['size']}"\
-              f"\n<b>Bedrooms</b>: {item['bedrooms']}" \
-              f"\n<b>Floor</b>: {item['floor']}" \
-              f"\n" \
-              f"\n<a href='{item['link']}'>Link</a>, <a href='{hide_link}'>Hide</a>"
+           f"\n<b>Price</b>: {item['price']}" \
+           f"\n<b>Price per Meter</b>: {ppm} " \
+           f"\n" \
+           f"\n<b>vs 30d avg</b>: {format_difference(ppm, ppm30)} " \
+           f"\n<b>vs 90d avg</b>: {format_difference(ppm, ppm90)} " \
+           f"\n<b>vs district avg</b>: {format_difference(ppm, ppmDistrict)} " \
+           f"\n" \
+           f"\n\n<b>District</b>: {item['district']} " \
+           f"\n<b>address</b>: {item['address']}" \
+           f"\n\n<b>Rooms</b>: {item['rooms']}" \
+           f"\n<b>Size</b>: {item['size']}" \
+           f"\n<b>Bedrooms</b>: {item['bedrooms']}" \
+           f"\n<b>Floor</b>: {item['floor']}" \
+           f"\n" \
+           f"\n<a href='{item['link']}'>Link</a>" \
+           f"\n" \
+           f"\n<a href='{hide_link}'>Hide</a>,  <a href='{favorite_link}'>Save</a>,  <a href='{remove_favorite_link}'>Unsave</a>"
 
     images = item['images']
     images_list = json.loads(images)
@@ -64,7 +70,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90):
         response = requests.head(url)
         if response.status_code != 200:
             break
-        media.append(InputMediaPhoto(media=url.replace('large','thumbs')))
+        media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
         i += 1
         time.sleep(2)
     if media:
@@ -77,36 +83,56 @@ async def send_flat_to_telegram(item, ppm30, ppm90):
     message = {'id': message_id, 'text': text}
     add_tg_message_to_db(message)
     await asyncio.sleep(2)
-    await add_message_id(message_id, hide_link)
+    await add_message_id(message_id, hide_link, favorite_link)
     await asyncio.sleep(10)
-
 
 
 async def run_bot(item):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
+    ppmDistrict = get_district_average_ppm(item['district'])
     logging.info(f'Send Message - {item["link"]}')
-    await send_flat_to_telegram(item,ppm30,ppm90)
+    await send_flat_to_telegram(item, ppm30, ppm90, ppmDistrict)
 
 
 async def hide_message(message_id):
     initial_text = get_tg_message_by_id(message_id)
 
     updated_text = f'<s>{initial_text}</s>'
-
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,
                                    caption=updated_text,
                                    parse_mode='HTML')
 
 
+async def add_favorite_tag(message_id):
+    initial_text = get_tg_message_by_id(message_id)
+
+    updated_text = f'{initial_text}\n\n #⭐saved '
+    await bot.edit_message_caption(chat_id=chat_id,
+                                   message_id=message_id,
+                                   caption=updated_text,
+                                   parse_mode='HTML')
 
 
-async def add_message_id(message_id, hide_link):
+async def remove_favorite_tag(message_id):
+    initial_text = get_tg_message_by_id(message_id)
+
+    updated_text = initial_text.replace('\n\n #⭐saved ', '')
+    await bot.edit_message_caption(chat_id=chat_id,
+                                   message_id=message_id,
+                                   caption=updated_text,
+                                   parse_mode='HTML')
+
+
+async def add_message_id(message_id, hide_link, favorite_link):
     initial_text = get_tg_message_by_id(message_id)
 
     new_hide_link = hide_link + f"&message_id={message_id}"
+    new_favorite_link = favorite_link + f"&message_id={message_id}"
+
     updated_text = initial_text.replace(hide_link, new_hide_link)
+    updated_text = updated_text.replace(favorite_link, new_favorite_link)
 
     await bot.edit_message_caption(chat_id=chat_id,
                                    message_id=message_id,

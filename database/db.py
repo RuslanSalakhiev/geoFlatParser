@@ -213,6 +213,31 @@ def get_average_ppm(days):
         conn.close()
 
 
+def get_district_average_ppm(district):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    # SQL to calculate the average price per meter for flats posted in the last 30 days
+    sql = f"""
+    SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
+    FROM flats
+    WHERE district = ?
+    """
+
+    try:
+        # Execute the query
+
+        cursor.execute(sql, (district,))
+        # Fetch the result
+        result = cursor.fetchone()
+        return result[0] if result[0] is not None else 0
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        conn.close()
+
+
 def hide_flat(flat_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
