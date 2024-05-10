@@ -2,6 +2,7 @@ from flask import Flask,request
 
 from config import vm_port
 from database.db import hide_flat
+from tg_bot.tg import hide_message
 
 
 def create_app():
@@ -9,15 +10,22 @@ def create_app():
 
     @app.route('/')
     def index():
-        return "Hello, World!"
+        return f"Hello"
 
     @app.route('/update')
-    def update_db():
+    async def update_db():
         item_id = request.args.get('id')
-        result = ''
+        message_id = request.args.get('message_id')
         if item_id:
             result = hide_flat(item_id)
-        return f"{result}"
+
+            if result == 'ok':
+                result_message = f"<span style='color:green; font-size: 30px'>Hidden</span>"
+                await hide_message(message_id)
+            else:
+                result_message = f"<span style='color:red; font-size: 30px'>Error</span>"
+
+        return result_message
 
     return app
 

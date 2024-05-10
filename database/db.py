@@ -1,7 +1,7 @@
 import logging
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime,timedelta
 
 DATABASE_PATH = 'flats.db'
 
@@ -40,7 +40,7 @@ def update_flats(data, url_id):
                 INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images ) 
                 VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images  )
                 ''', item)
-                logging.info(f"Inserted in DB: {item['link']}")
+                logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
 
             else:
@@ -53,7 +53,7 @@ def update_flats(data, url_id):
                 # Update the 'date' of the existing record where the link matches
                 c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
                           (item['parsed_date'], item['price'], item['link']))
-                logging.info(f"Updated existing link: {item['link']}")
+                logging.info(f"FLATS: Updated existing link: {item['link']}")
                 update_count += 1
 
         conn.commit()  # Commit all changes to the database
@@ -121,6 +121,15 @@ def create_tables():
             )
             ''')
 
+    # Create a new table called 'tgmessages'
+    c.execute('''
+             CREATE TABLE IF NOT EXISTS tgmessages (
+                 id INTEGER PRIMARY KEY,
+                 message TEXT
+
+             )
+             ''')
+
     c.execute('SELECT COUNT(*) FROM requests')
 
     count = c.fetchone()[0]
@@ -154,25 +163,25 @@ def get_requests():
 
 def get_new_flats(request_id):
     conn = sqlite3.connect(DATABASE_PATH)
-    # This line changes the row factory method to return dictionaries instead of tuples
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = sqlite3.Row  # Return dictionaries instead of tuples
     cursor = conn.cursor()
-    # Define the SQL query to fetch flats that are not hidden, match the request_id, and have today's date
+
+    # Calculate yesterday's date in the format 'YYYY-MM-DD'
+    yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # Update the SQL query to fetch flats that are not hidden, match the request_id,
+    # and were added on or after yesterday's date
     query = """
-      SELECT * FROM flats 
-      WHERE hide = 0 
-      AND request_id = ?
-      """
-    cursor.execute(query, (request_id,))
-    # Fetch all results
+            SELECT * FROM flats 
+            WHERE hide = 0 
+            AND request_id = ?
+            AND date >= ?
+        """
+    cursor.execute(query, (request_id, yesterday_date))
+
+    # Fetch all results that meet the criteria
     entries = cursor.fetchall()
-
-    today_date = datetime.now().strftime("%d %b")  # Formats the date as 'Day MonthName'
-
-    # Filter entries where date matches today's date
-    flats_list = [dict(row) for row in entries if
-                  datetime.strptime(row['date'], '%Y-%m-%d %H:%M:%S').strftime("%d %b") == today_date]
-    # Convert rows to dictionaries
+    flats_list = [dict(row) for row in entries]
 
     conn.close()
     return flats_list
@@ -215,10 +224,49 @@ def hide_flat(flat_id):
         # Execute the query
         cursor.execute(sql,  (flat_id,))
         conn.commit()
-        return 'Hidden'
+        return 'ok'
     except Exception as e:
         print(f"An error occurred: {e}")
-        return 'Error'
+        return 'error'
     finally:
         # Close the connection
+        conn.close()
+
+
+def add_tg_message_to_db(message):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Execute the query
+        cursor.execute('''
+                           INSERT INTO tgmessages (id, message) 
+                           VALUES (:id, :text)
+                           ''', message)
+
+        conn.commit()
+        logging.info(f"TGMessages: Inserted {message['id']}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        conn.close()
+
+
+def get_tg_message_by_id(message_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute("SELECT message FROM tgmessages WHERE id = ?", (message_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchone()
+        if result:
+            return result[0]  # result[0] because fetchone() returns a tuple
+        else:
+            print(f"No message found with ID: {message_id}")
+            return None
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
         conn.close()
