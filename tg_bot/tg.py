@@ -4,7 +4,7 @@ import os
 
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
 import asyncio
-from config import bot_token, chat_id, test_bot_token
+from config import bot_token, test_chat_id, prod_chat_id, test_bot_token
 from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, get_tg_message_by_id, \
     hide_flat, update_tg_message_in_db
 import requests
@@ -15,9 +15,11 @@ env = os.getenv('ENV', 'development')
 
 if env == 'production':
     token = bot_token
+    chat_id = prod_chat_id
     bot = Bot(token=token)
 else:
     token = test_bot_token
+    chat_id = test_chat_id
     bot = Bot(token=token)
 
 
