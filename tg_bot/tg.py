@@ -94,12 +94,12 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
             await asyncio.sleep(3)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("Link", url=item['link']),
-                InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}"),
-                InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}"),
-                InlineKeyboardButton("💔️ Dis", callback_data=f"dis_{item['id']}_{message_id}")
-            ]])
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Link", url=item['link']),
+                 InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}")],
+                [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}"),
+                 InlineKeyboardButton("💔️ Dis", callback_data=f"dis_{item['id']}_{message_id}")]
+            ])
 
             await bot.send_message(chat_id=chat_id, text="Actions", parse_mode='html', reply_markup=keyboard)
             await add_tg_message_to_db(message)
