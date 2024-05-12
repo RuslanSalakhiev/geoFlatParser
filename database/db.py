@@ -37,8 +37,8 @@ def update_flats(data, url_id):
                 item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 c.execute('''
-                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images ) 
-                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images  )
+                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like ) 
+                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0  )
                 ''', item)
                 logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
@@ -108,7 +108,8 @@ def create_tables():
             address TEXT,
             hide INTEGER,
             request_id INTEGER,
-            images TEXT
+            images TEXT,
+            like INTEGER
         )
         ''')
 
@@ -256,6 +257,45 @@ async def hide_flat(flat_id):
         # Close the connection
         conn.close()
 
+
+async def like_flat(flat_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    sql = f"""
+    UPDATE flats SET like = 1 WHERE id = ?
+    """
+
+    try:
+        # Execute the query
+        cursor.execute(sql,  (flat_id,))
+        conn.commit()
+        return 'ok'
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'error'
+    finally:
+        # Close the connection
+        conn.close()
+
+
+async def dislike_flat(flat_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    sql = f"""
+    UPDATE flats SET like = 0 WHERE id = ?
+    """
+
+    try:
+        # Execute the query
+        cursor.execute(sql,  (flat_id,))
+        conn.commit()
+        return 'ok'
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'error'
+    finally:
+        # Close the connection
+        conn.close()
 
 async def add_tg_message_to_db(message):
     conn = sqlite3.connect(DATABASE_PATH)

@@ -5,8 +5,9 @@ import os
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
 import asyncio
 from config import bot_token, test_chat_id, prod_chat_id, test_bot_token
-from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, get_tg_message_by_id, \
-    hide_flat, update_tg_message_in_db
+from database.db import add_tg_message_to_db, dislike_flat, get_average_ppm, get_district_average_ppm, \
+    get_tg_message_by_id, \
+    hide_flat, like_flat, update_tg_message_in_db
 import requests
 from telegram.ext import Application, CallbackQueryHandler,ContextTypes
 
@@ -98,10 +99,10 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
                 [InlineKeyboardButton("Link", url=item['link']),
                  InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}")],
                 [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}"),
-                 InlineKeyboardButton("💔️ Dis", callback_data=f"dis_{item['id']}_{message_id}")]
+                 InlineKeyboardButton("💔️ Dislike", callback_data=f"dis_{item['id']}_{message_id}")]
             ])
 
-            await bot.send_message(chat_id=chat_id, text="Actions", parse_mode='html', reply_markup=keyboard)
+            await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard)
             await add_tg_message_to_db(message)
             await asyncio.sleep(2)
         except Exception as e:
@@ -165,15 +166,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         message_id = data.split("_")[2]
         await hide_message(message_id, item_id)
 
+
     elif "like_" in data:
         print('like',data)
+        item_id = data.split("_")[1]
         message_id = data.split("_")[2]
         await add_favorite_tag(message_id)
+        await like_flat(item_id)
 
     elif "dis_" in data:
         print('dis', data)
+        item_id = data.split("_")[1]
         message_id = data.split("_")[2]
         await remove_favorite_tag(message_id)
+        await dislike_flat(item_id)
 
 
 def listen_actions():
