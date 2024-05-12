@@ -62,7 +62,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     date_object = datetime.strptime(item['date'], "%Y-%m-%d %H:%M:%S")
     formatted_date = date_object.strftime("%d.%m.%y")
 
-    text = f"<i>{url_description}</i>; ID: {item['id']}" \
+    text = f"<i>{url_description}</i> | ID: {item['id']}" \
            f"\n\n<b>Date</b>: {formatted_date}" \
            f"\n<b>Price</b>: {price_string}" \
            f"\n<b>Price per Meter</b>: {ppm_string} " \
