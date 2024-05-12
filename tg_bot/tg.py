@@ -1,15 +1,24 @@
 import json
 import logging
+import os
 
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
 import asyncio
-from config import bot_token, chat_id
+from config import bot_token, chat_id, test_bot_token
 from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, get_tg_message_by_id, \
     hide_flat, update_tg_message_in_db
 import requests
-from telegram.ext import Application, CallbackQueryHandler
+from telegram.ext import Application, CallbackQueryHandler,ContextTypes
 
-bot = Bot(token=bot_token)
+
+env = os.getenv('ENV', 'development')
+
+if env == 'production':
+    token = bot_token
+    bot = Bot(token=token)
+else:
+    token = test_bot_token
+    bot = Bot(token=token)
 
 
 async def send_message_to_telegram(message):
@@ -83,12 +92,12 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
             await asyncio.sleep(3)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("Link", url=item['link']),
-                 InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}")],
-                [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}"),
-                 InlineKeyboardButton("💔️ Dis", callback_data=f"dis_{item['id']}_{message_id}")]
-            ])
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("Link", url=item['link']),
+                InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}"),
+                InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}"),
+                InlineKeyboardButton("💔️ Dis", callback_data=f"dis_{item['id']}_{message_id}")
+            ]])
 
             await bot.send_message(chat_id=chat_id, text="Actions", parse_mode='html', reply_markup=keyboard)
             await add_tg_message_to_db(message)
@@ -141,29 +150,32 @@ async def remove_favorite_tag(message_id):
     update_tg_message_in_db(message)
 
 
-async def button_handler(update: Update):
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
 
     await query.answer()
 
     data = query.data
+
     if "hide_" in data:
+        print('hide', data)
         item_id = data.split("_")[1]
         message_id = data.split("_")[2]
         await hide_message(message_id, item_id)
 
     elif "like_" in data:
+        print('like',data)
         message_id = data.split("_")[2]
         await add_favorite_tag(message_id)
 
     elif "dis_" in data:
+        print('dis', data)
         message_id = data.split("_")[2]
         await remove_favorite_tag(message_id)
 
 
 def listen_actions():
-    # Replace 'YOUR_TOKEN_HERE' with your actual bot's token
-    application = Application.builder().token(bot_token).build()
+    application = Application.builder().token(token).build()
 
     # Register handlers
     application.add_handler(CallbackQueryHandler(button_handler))
