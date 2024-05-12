@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from datetime import datetime
 
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
 import asyncio
@@ -42,7 +43,7 @@ def format_difference(num1, num2):
     return formatted_difference
 
 
-async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
+async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description):
     size = float(item['size'].split()[0])
     price = float(item['price'].replace(',', ''))
     first_price = float(item['first_price'].replace(',', ''))
@@ -57,22 +58,24 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
     ppm = round(price / size)
     prev_ppm = round(first_price / size)
     ppm_string = ppm if price == first_price else f"{ppm}. <b>First:</b> {prev_ppm}"
-    text = f"\n<b>Date</b>: {item['date']}" \
+
+    date_object = datetime.strptime(item['date'], "%Y-%m-%d %H:%M:%S")
+    formatted_date = date_object.strftime("%d.%m.%y")
+
+    text = f"<i>{url_description}</i>; ID: {item['id']}" \
+           f"\n\n<b>Date</b>: {formatted_date}" \
            f"\n<b>Price</b>: {price_string}" \
            f"\n<b>Price per Meter</b>: {ppm_string} " \
-           f"\n" \
-           f"\n<b>vs 30d avg</b>: {format_difference(ppm, ppm30)} " \
-           f"\n<b>vs 90d avg</b>: {format_difference(ppm, ppm90)} " \
-           f"\n<b>vs district avg</b>: {format_difference(ppm, ppm_district)} " \
-           f"\n" \
+           f"\n\nComparison:" \
+           f"\n<b>30days  </b>: {format_difference(ppm, ppm30)} " \
+           f"\n<b>90days  </b>: {format_difference(ppm, ppm90)} " \
+           f"\n<b>District </b>: {format_difference(ppm, ppm_district)} " \
            f"\n\n<b>District</b>: {item['district']} " \
            f"\n<b>address</b>: {item['address']}" \
            f"\n\n<b>Rooms</b>: {item['rooms']}" \
            f"\n<b>Size</b>: {item['size']}" \
            f"\n<b>Bedrooms</b>: {item['bedrooms']}" \
-           f"\n<b>Floor</b>: {item['floor']}" \
-           f"\n\n ID: {item['id']}"
-
+           f"\n<b>Floor</b>: {item['floor']}"
     images = item['images']
     images_list = json.loads(images)
 
@@ -109,13 +112,13 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
             print(f"An error occurred while retrieving the message: {e}")
 
 
-async def run_bot(item):
+async def run_bot(item, url_description):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
     ppm_district = get_district_average_ppm(item['district'])
 
     logging.info(f'Send Message - {item["link"]}')
-    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district)
+    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description)
 
 
 async def hide_message(message_id, item_id):

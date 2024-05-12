@@ -151,13 +151,13 @@ def get_requests():
     cursor = conn.cursor()
 
     # Define the SQL query to fetch all URLs
-    query = "SELECT id,url FROM requests"
+    query = "SELECT id,url, description FROM requests"
     cursor.execute(query)
     # Fetch all results
     entries = cursor.fetchall()
 
     # Convert the list of tuples into a simple list of URLs
-    result = [(entry[0], entry[1]) for entry in entries]
+    result = [(entry[0], entry[1], entry[2]) for entry in entries]
     conn.close()
     return result
 
