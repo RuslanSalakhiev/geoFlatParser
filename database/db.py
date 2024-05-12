@@ -167,8 +167,7 @@ def get_new_flats(request_id):
     cursor = conn.cursor()
 
     # Calculate yesterday's date in the format 'YYYY-MM-DD'
-    yesterday_date = (datetime.now() - timedelta(days=1))
-
+    yesterday_date = (datetime.now() - timedelta(days=1, minutes=30))
     # Update the SQL query to fetch flats that are not hidden, match the request_id,
     # and were added on or after yesterday's date
     query = """
@@ -258,17 +257,9 @@ async def hide_flat(flat_id):
         conn.close()
 
 
-def add_tg_message_to_db(message,hide_link, favorite_link, remove_favorite_link):
+async def add_tg_message_to_db(message):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-
-    new_hide_link = hide_link + f"&message_id={message['id']}"
-    new_favorite_link = favorite_link + f"&message_id={message['id']}"
-    new_remove_favorite_link = remove_favorite_link + f"&message_id={message['id']}"
-
-    message['text'] = message['text'].replace(hide_link, new_hide_link)
-    message['text'] = message['text'].replace(favorite_link, new_favorite_link)
-    message['text'] = message['text'].replace(remove_favorite_link, new_remove_favorite_link)
     try:
         # Execute the query
         cursor.execute('''
@@ -286,7 +277,6 @@ def add_tg_message_to_db(message,hide_link, favorite_link, remove_favorite_link)
 
 
 def update_tg_message_in_db(message):
-    print("update")
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
@@ -304,6 +294,7 @@ def update_tg_message_in_db(message):
     finally:
         # Close the connection
         conn.close()
+
 
 def get_tg_message_by_id(message_id):
     conn = sqlite3.connect(DATABASE_PATH)
