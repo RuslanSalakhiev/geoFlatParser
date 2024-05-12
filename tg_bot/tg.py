@@ -44,7 +44,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district):
     price_string = item['price'] if price == first_price else f"{item['price']}. <b>First:</b> {item['first_price']} {price_arrow}"
     ppm = round(price / size)
     prev_ppm = round(first_price / size)
-    ppm_string = ppm if price == first_price else f"{ppm}. <b>First:</b> {prev_ppm} {price_arrow}"
+    ppm_string = ppm if price == first_price else f"{ppm}. <b>First:</b> {prev_ppm}"
     text = f"\n<b>Date</b>: {item['date']}" \
            f"\n<b>Price</b>: {price_string}" \
            f"\n<b>Price per Meter</b>: {ppm_string} " \
