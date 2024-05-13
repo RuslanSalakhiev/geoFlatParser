@@ -24,17 +24,17 @@ bot = Bot(token=token)
 
 
 def format_difference(num1, num2):
-    # Calculate the difference
-    difference = round(num1 - num2)
-    arrow = "🟢"
-    if difference > 0:
-        arrow = "🔴"
-    elif difference < 0:
-        arrow = "🟢"
-    # Format the difference to include a sign
-    formatted_difference = f"{difference:+} {arrow}"
-    return formatted_difference
 
+    # Calculate the absolute difference
+    difference = round(num1 - num2)
+    # Calculate the percentage difference relative to num2
+    percentage_difference = round((difference / num2 * 100)) if num2 != 0 else float('inf')  # Handle division by zero
+
+    # Choose the arrow based on the difference
+    arrow = "🟢" if difference < 0 else "🔴" if difference > 0 else "⚪"
+    # Format the difference to include a sign and the arrow symbol
+    formatted_difference = f"{difference:+} ({percentage_difference}%) {arrow}"
+    return formatted_difference
 
 async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i, chat_id):
     size = float(item['size'].split()[0])
@@ -83,12 +83,12 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
         if response.status_code != 200 or i > 10:
             break
         media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
-
+        await asyncio.sleep(2)
         i += 1
     if media:
         try:
-            await asyncio.sleep(1)
-            sent_messages = await bot.send_media_group(write_timeout=15, chat_id=chat_id, caption=text, parse_mode='html', media=media)
+            await asyncio.sleep(2)
+            sent_messages = await bot.send_media_group(read_timeout=20,write_timeout=20, chat_id=chat_id, caption=text, parse_mode='html', media=media)
             await asyncio.sleep(4)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
@@ -98,7 +98,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
                 [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}_{chat_id}"),
                  InlineKeyboardButton("💔️ Dislike", callback_data=f"dis_{item['id']}_{message_id}_{chat_id}")]
             ])
-            await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard)
+            await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard, read_timeout=15,write_timeout=15)
             await add_tg_message_to_db(message)
             await update_sent_status(item['id'])
             await asyncio.sleep(3)

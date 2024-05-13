@@ -32,12 +32,16 @@ async def bot_schedule():
             chat_name = get_chat_from_db(url_id, env)
             chat_id = globals()[chat_name]
             i = 1
-            for flat in new_flats:
-                await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
-                i+=1
+
+            if len(new_flats) > 0:
+                for flat in new_flats:
+                    await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
+                    i+=1
 
         if env == 'production':
             await sleep_until()
+        else:
+            break
 
 
 if __name__ == "__main__":

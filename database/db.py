@@ -11,7 +11,7 @@ logging.basicConfig(
     filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO)
+    level=logging.WARNING)
 
 
 def update_flats(data, url_id):
@@ -146,10 +146,10 @@ def create_tables():
     # Print the number of records, indicating whether the table is empty or not
     if count == 0:
         c.execute('''
-               INSERT INTO requests (url, description)
+               INSERT INTO requests (url, description, test_chat, prod_chat)
                VALUES 
-               ('https://www.myhome.ge/en/s/iyideba-bina-Tbilisi/?Keyword=Vake-Saburtalo%2C+Old+Tbilisi&AdTypeID=1&PrTypeID=1&cities=1&districts=111.28.30.38.39.40.41.42.43.44.45.46.47.101.64.67.66&regions=4.6&CardView=2&FCurrencyID=1&FPriceFrom=50000&FPriceTo=100000&AreaSizeID=1&AreaSizeFrom=30&AreaSizeTo=70&RoomNums=1.2&FloorNums=notfirst.notlast&EstateTypeID=1&OwnerTypeID=1&RenovationID=1.6', 'Buy, 1-2rooms, 100k'),
-               ('https://www.myhome.ge/en/s/qiravdeba-bina-Tbilisi/?Keyword=Vake-Saburtalo&AdTypeID=3&PrTypeID=1&cities=1&districts=28.38.47&regions=4&CardView=2&FCurrencyID=1&FPriceFrom=1000&FPriceTo=1500&AreaSizeID=1&AreaSizeFrom=80&AreaSizeTo=150&BedRoomNums=2.3&FloorNums=notfirst.notlast&EstateTypeID=1&RoomNums=3.4', 'Rent, 1-1.8k, 80-180m')
+               ('https://www.myhome.ge/en/s/iyideba-bina-Tbilisi/?Keyword=Vake-Saburtalo%2C+Old+Tbilisi&AdTypeID=1&PrTypeID=1&cities=1&districts=111.28.30.38.39.40.41.42.43.44.45.46.47.101.64.67.66&regions=4.6&CardView=2&FCurrencyID=1&FPriceFrom=50000&FPriceTo=100000&AreaSizeID=1&AreaSizeFrom=30&AreaSizeTo=70&RoomNums=1.2&FloorNums=notfirst.notlast&EstateTypeID=1&OwnerTypeID=1&RenovationID=1.6', 'Buy, 1-2rooms, 100k', 'test_chat_id','buy_chat_id'),
+               ('https://www.myhome.ge/en/s/qiravdeba-bina-Tbilisi/?Keyword=Vake-Saburtalo&AdTypeID=3&PrTypeID=1&cities=1&districts=28.38.47&regions=4&CardView=2&FCurrencyID=1&FPriceFrom=1000&FPriceTo=1500&AreaSizeID=1&AreaSizeFrom=80&AreaSizeTo=150&BedRoomNums=2.3&FloorNums=notfirst.notlast&EstateTypeID=1&RoomNums=3.4', 'Rent, 1-1.8k, 80-180m',  'test_chat_id','rent_chat_id')
                         
            ''')
         conn.commit()
@@ -205,7 +205,7 @@ def get_average_ppm(days, url_id):
     daysShift = f"-{days} days"
     # SQL to calculate the average price per meter for flats posted in the last 30 days
     sql = f"""
-    SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
+    SELECT ROUND(AVG(cast(replace(price, ',','.') as float) * 10000 / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL)))/10 as average_price
     FROM flats
     WHERE date >= date('now',  ?) AND request_id = ?
     """
@@ -230,7 +230,7 @@ def get_district_average_ppm(district, url_id):
     cursor = conn.cursor()
     # SQL to calculate the average price per meter for flats posted in the last 30 days
     sql = f"""
-    SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
+    SELECT ROUND(AVG(cast(replace(price, ',','.') as float) / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 10000)/10 as average_price
     FROM flats
     WHERE LOWER(district) = LOWER(?) and request_id = ?
     """
@@ -391,7 +391,7 @@ def get_chat_from_db(request_id, env):
         conn.close()
 
 
-def update_sent_status(id):
+async def update_sent_status(id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
@@ -399,8 +399,8 @@ def update_sent_status(id):
         cursor.execute(f'''
                            UPDATE flats
                            SET sent_to_tg = 1
-                           WHERE id = {id}
-                           ''', )
+                           WHERE id = ?
+                           ''', (id,) )
 
         conn.commit()
     except Exception as e:
