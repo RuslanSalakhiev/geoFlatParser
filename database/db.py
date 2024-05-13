@@ -123,7 +123,9 @@ def create_tables():
             CREATE TABLE IF NOT EXISTS requests (
                 id INTEGER PRIMARY KEY,
                 url TEXT,
-                description TEXT
+                description TEXT,
+                test_chat TEXT,
+                prod_chat TEXT
             )
             ''')
 
@@ -374,6 +376,7 @@ def get_chat_from_db(request_id, env):
         cursor.execute(f"SELECT {column} FROM requests WHERE id = ?", (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchone()
+
         if result:
             return result[0]  # result[0] because fetchone() returns a tuple
         else:

@@ -88,7 +88,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     if media:
         try:
             sent_messages = await bot.send_media_group(chat_id=chat_id, caption=text, parse_mode='html', media=media)
-            await asyncio.sleep(7)
+            await asyncio.sleep(10)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
             keyboard = InlineKeyboardMarkup([
