@@ -197,7 +197,7 @@ def get_new_flats(request_id):
     return flats_list
 
 
-def get_average_ppm(days):
+def get_average_ppm(days, url_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     daysShift = f"-{days} days"
@@ -205,13 +205,13 @@ def get_average_ppm(days):
     sql = f"""
     SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
     FROM flats
-    WHERE date >= date('now',  ?)
+    WHERE date >= date('now',  ?) AND request_id = ?
     """
 
     try:
         # Execute the query
 
-        cursor.execute(sql, (daysShift,))
+        cursor.execute(sql, (daysShift, url_id))
         # Fetch the result
         result = cursor.fetchone()
         return result[0] if result[0] is not None else 0
@@ -223,20 +223,20 @@ def get_average_ppm(days):
         conn.close()
 
 
-def get_district_average_ppm(district):
+def get_district_average_ppm(district, url_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     # SQL to calculate the average price per meter for flats posted in the last 30 days
     sql = f"""
     SELECT ROUND(AVG(price / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 1000) as average_price
     FROM flats
-    WHERE LOWER(district) = LOWER(?)
+    WHERE LOWER(district) = LOWER(?) and request_id = ?
     """
 
     try:
         # Execute the query
 
-        cursor.execute(sql, (district,))
+        cursor.execute(sql, (district, url_id))
         # Fetch the result
         result = cursor.fetchone()
         return result[0] if result[0] is not None else 0

@@ -34,7 +34,7 @@ async def bot_schedule():
             chat_id = globals()[chat_name]
             i = 1
             for flat in new_flats:
-                await run_bot(flat, description, len(new_flats), i, chat_id)
+                await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
                 i+=1
 
 

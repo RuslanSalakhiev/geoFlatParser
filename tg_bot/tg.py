@@ -83,12 +83,13 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
         if response.status_code != 200 or i > 10:
             break
         media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
-        await asyncio.sleep(3)
+
         i += 1
     if media:
         try:
-            sent_messages = await bot.send_media_group(chat_id=chat_id, caption=text, parse_mode='html', media=media)
-            await asyncio.sleep(10)
+            await asyncio.sleep(1)
+            sent_messages = await bot.send_media_group(write_timeout=15, chat_id=chat_id, caption=text, parse_mode='html', media=media)
+            await asyncio.sleep(4)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
             keyboard = InlineKeyboardMarkup([
@@ -97,18 +98,17 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
                 [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}_{chat_id}"),
                  InlineKeyboardButton("💔️ Dislike", callback_data=f"dis_{item['id']}_{message_id}_{chat_id}")]
             ])
-
             await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard)
             await add_tg_message_to_db(message)
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
         except Exception as e:
             print(f"An error occurred while retrieving the message: {e}")
 
 
-async def run_bot(item, url_description, total_cnt, i, chat_id):
-    ppm30 = get_average_ppm('30')
-    ppm90 = get_average_ppm('90')
-    ppm_district = get_district_average_ppm(item['district'])
+async def run_bot(item, url_description, total_cnt, i, chat_id,url_id ):
+    ppm30 = get_average_ppm('30', url_id )
+    ppm90 = get_average_ppm('90', url_id)
+    ppm_district = get_district_average_ppm(item['district'], url_id)
 
     logging.info(f'Send Message - {item["link"]}')
     await send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i, chat_id)
