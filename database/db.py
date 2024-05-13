@@ -362,3 +362,25 @@ def get_tg_message_by_id(message_id):
         return None
     finally:
         conn.close()
+
+
+def get_chat_from_db(request_id, env):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    column = 'prod_chat' if env == 'production' else 'test_chat'
+
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute(f"SELECT {column} FROM requests WHERE id = ?", (request_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchone()
+        if result:
+            return result[0]  # result[0] because fetchone() returns a tuple
+        else:
+            print(f"No request found with ID: {request_id}")
+            return None
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()

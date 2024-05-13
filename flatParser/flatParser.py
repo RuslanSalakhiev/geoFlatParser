@@ -11,8 +11,6 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Set up logging
-from tg_bot.tg import send_message_to_telegram
-
 logging.basicConfig(
     filename='parser.log',
     filemode='a',
@@ -155,7 +153,7 @@ def parse_url(init_url):
 
 def run_parser():
     urls = get_requests()
-    for url_id, url in urls:
+    for url_id, url, descriptions in urls:
         data = parse_url(url)
         update_flats(data, url_id)
 

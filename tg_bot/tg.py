@@ -5,7 +5,7 @@ from datetime import datetime
 
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
 import asyncio
-from config import bot_token, test_chat_id, prod_chat_id, test_bot_token
+from config import bot_token, test_bot_token
 from database.db import add_tg_message_to_db, dislike_flat, get_average_ppm, get_district_average_ppm, \
     get_tg_message_by_id, \
     hide_flat, like_flat, update_tg_message_in_db
@@ -17,17 +17,10 @@ env = os.getenv('ENV', 'development')
 
 if env == 'production':
     token = bot_token
-    chat_id = prod_chat_id
-    bot = Bot(token=token)
 else:
     token = test_bot_token
-    chat_id = test_chat_id
-    bot = Bot(token=token)
 
-
-async def send_message_to_telegram(message):
-    await bot.send_message(chat_id=chat_id, text=message, parse_mode='markdown')
-    await asyncio.sleep(10)
+bot = Bot(token=token)
 
 
 def format_difference(num1, num2):
@@ -43,7 +36,7 @@ def format_difference(num1, num2):
     return formatted_difference
 
 
-async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i):
+async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i, chat_id):
     size = float(item['size'].split()[0])
     price = float(item['price'].replace(',', ''))
     first_price = float(item['first_price'].replace(',', ''))
@@ -95,14 +88,14 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     if media:
         try:
             sent_messages = await bot.send_media_group(chat_id=chat_id, caption=text, parse_mode='html', media=media)
-            await asyncio.sleep(5)
+            await asyncio.sleep(7)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("Link", url=item['link']),
-                 InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}")],
-                [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}"),
-                 InlineKeyboardButton("💔️ Dislike", callback_data=f"dis_{item['id']}_{message_id}")]
+                 InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}_{chat_id}")],
+                [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}_{chat_id}"),
+                 InlineKeyboardButton("💔️ Dislike", callback_data=f"dis_{item['id']}_{message_id}_{chat_id}")]
             ])
 
             await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard)
@@ -112,16 +105,16 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
             print(f"An error occurred while retrieving the message: {e}")
 
 
-async def run_bot(item, url_description, total_cnt, i):
+async def run_bot(item, url_description, total_cnt, i, chat_id):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
     ppm_district = get_district_average_ppm(item['district'])
 
     logging.info(f'Send Message - {item["link"]}')
-    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i)
+    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i, chat_id)
 
 
-async def hide_message(message_id, item_id):
+async def hide_message(message_id, item_id, chat_id):
     initial_text = get_tg_message_by_id(message_id)
     updated_text = f'<s>{initial_text}</s>'
 
@@ -132,7 +125,7 @@ async def hide_message(message_id, item_id):
                                    parse_mode='HTML')
 
 
-async def add_favorite_tag(message_id):
+async def add_favorite_tag(message_id, chat_id):
     initial_text = get_tg_message_by_id(message_id)
     updated_text = f'{initial_text}\n\n #Liked ❤❤❤'
     await bot.edit_message_caption(chat_id=chat_id,
@@ -143,7 +136,7 @@ async def add_favorite_tag(message_id):
     update_tg_message_in_db(message)
 
 
-async def remove_favorite_tag(message_id):
+async def remove_favorite_tag(message_id, chat_id):
     initial_text = get_tg_message_by_id(message_id)
 
     updated_text = initial_text.replace('\n\n #Liked ❤❤❤', '')
@@ -167,21 +160,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         print('hide', data)
         item_id = data.split("_")[1]
         message_id = data.split("_")[2]
-        await hide_message(message_id, item_id)
+        chat_id = data.split("_")[3]
+        await hide_message(message_id, item_id, chat_id)
 
 
     elif "like_" in data:
         print('like',data)
         item_id = data.split("_")[1]
         message_id = data.split("_")[2]
-        await add_favorite_tag(message_id)
+        chat_id = data.split("_")[3]
+        await add_favorite_tag(message_id, chat_id)
         await like_flat(item_id)
 
     elif "dis_" in data:
         print('dis', data)
         item_id = data.split("_")[1]
         message_id = data.split("_")[2]
-        await remove_favorite_tag(message_id)
+        chat_id = data.split("_")[3]
+        await remove_favorite_tag(message_id, chat_id)
         await dislike_flat(item_id)
 
 

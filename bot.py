@@ -3,8 +3,9 @@ import os
 import asyncio
 from datetime import datetime, timedelta
 
-from database.db import get_new_flats, get_requests
+from database.db import get_chat_from_db, get_new_flats, get_requests
 from tg_bot.tg import run_bot
+from config import *
 
 
 async def sleep_until():
@@ -29,9 +30,11 @@ async def bot_schedule():
         urls = get_requests()
         for (url_id, url, description) in urls:
             new_flats = get_new_flats(url_id)
+            chat_name = get_chat_from_db(url_id, env)
+            chat_id = globals()[chat_name]
             i = 1
             for flat in new_flats:
-                await run_bot(flat, description, len(new_flats), i)
+                await run_bot(flat, description, len(new_flats), i, chat_id)
                 i+=1
 
 
