@@ -25,8 +25,7 @@ async def sleep_until():
 async def bot_schedule():
     while True:
         env = os.getenv('ENV', 'development')
-        if env == 'production':
-            await sleep_until()
+
         urls = get_requests()
         for (url_id, url, description) in urls:
             new_flats = get_new_flats(url_id)
@@ -36,6 +35,9 @@ async def bot_schedule():
             for flat in new_flats:
                 await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
                 i+=1
+
+        if env == 'production':
+            await sleep_until()
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ def update_flats(data, url_id):
     # Attempt to insert new data into the 'flats' table
     try:
         for item in data:
-            # Execute a query to check if a record with the same 'link' already exists
+            # Execute a query to check if a record with the same 'link' and other params already exists
             c.execute('''
                            SELECT COUNT(*) FROM flats 
                            WHERE link = ? OR (size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
@@ -42,8 +42,8 @@ def update_flats(data, url_id):
                 item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 c.execute('''
-                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like ) 
-                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0  )
+                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg ) 
+                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0,0  )
                 ''', item)
                 logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
@@ -56,7 +56,7 @@ def update_flats(data, url_id):
                 item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 # Update the 'date' of the existing record where the link matches
-                c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
+                c.execute('UPDATE flats SET date = ?, price=?, sent_to_tg = 0 WHERE link = ?',
                           (item['parsed_date'], item['price'], item['link']))
                 logging.info(f"FLATS: Updated existing link: {item['link']}")
                 update_count += 1
@@ -114,7 +114,8 @@ def create_tables():
             hide INTEGER,
             request_id INTEGER,
             images TEXT,
-            like INTEGER
+            like INTEGER,
+            sent_to_tg INTEGER 
         )
         ''')
 
@@ -185,6 +186,7 @@ def get_new_flats(request_id):
             SELECT * FROM flats 
             WHERE hide = 0 
             AND request_id = ?
+            AND sent_to_tg = 0
             AND date >= ?
         """
     cursor.execute(query, (request_id, yesterday_date))
@@ -386,4 +388,23 @@ def get_chat_from_db(request_id, env):
         print(f"An error occurred while retrieving the message: {e}")
         return None
     finally:
+        conn.close()
+
+
+def update_sent_status(id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Execute the update query
+        cursor.execute(f'''
+                           UPDATE flats
+                           SET sent_to_tg = 1
+                           WHERE id = {id}
+                           ''', )
+
+        conn.commit()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
         conn.close()

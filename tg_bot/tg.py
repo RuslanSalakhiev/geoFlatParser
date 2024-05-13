@@ -8,7 +8,7 @@ import asyncio
 from config import bot_token, test_bot_token
 from database.db import add_tg_message_to_db, dislike_flat, get_average_ppm, get_district_average_ppm, \
     get_tg_message_by_id, \
-    hide_flat, like_flat, update_tg_message_in_db
+    hide_flat, like_flat, update_sent_status, update_tg_message_in_db
 import requests
 from telegram.ext import Application, CallbackQueryHandler,ContextTypes
 
@@ -100,6 +100,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
             ])
             await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard)
             await add_tg_message_to_db(message)
+            await update_sent_status(item['id'])
             await asyncio.sleep(3)
         except Exception as e:
             print(f"An error occurred while retrieving the message: {e}")
