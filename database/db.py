@@ -25,7 +25,12 @@ def update_flats(data, url_id):
     try:
         for item in data:
             # Execute a query to check if a record with the same 'link' already exists
-            c.execute('SELECT COUNT(*) FROM flats WHERE link = ?', (item['link'],))
+            c.execute('''
+                           SELECT COUNT(*) FROM flats 
+                           WHERE link = ? OR (size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
+                       ''',
+                      (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district']))
+
             if c.fetchone()[0] == 0:  # If no existing record, the link is unique
                 # Insert new record into the database since the link is unique
                 item['request_id'] = url_id
@@ -139,7 +144,10 @@ def create_tables():
     if count == 0:
         c.execute('''
                INSERT INTO requests (url, description)
-                       VALUES ('https://www.myhome.ge/en/s/iyideba-bina-Tbilisi/?Keyword=Vake-Saburtalo%2C+Old+Tbilisi&AdTypeID=1&PrTypeID=1&cities=1&districts=111.28.30.38.39.40.41.42.43.44.45.46.47.101.64.67.66&regions=4.6&CardView=2&FCurrencyID=1&FPriceFrom=50000&FPriceTo=100000&AreaSizeID=1&AreaSizeFrom=30&AreaSizeTo=70&RoomNums=1.2&FloorNums=notfirst.notlast&EstateTypeID=1&OwnerTypeID=1&RenovationID=1.6', 'buy, vake-saburtalo, 1-2rooms, <100k')
+               VALUES 
+               ('https://www.myhome.ge/en/s/iyideba-bina-Tbilisi/?Keyword=Vake-Saburtalo%2C+Old+Tbilisi&AdTypeID=1&PrTypeID=1&cities=1&districts=111.28.30.38.39.40.41.42.43.44.45.46.47.101.64.67.66&regions=4.6&CardView=2&FCurrencyID=1&FPriceFrom=50000&FPriceTo=100000&AreaSizeID=1&AreaSizeFrom=30&AreaSizeTo=70&RoomNums=1.2&FloorNums=notfirst.notlast&EstateTypeID=1&OwnerTypeID=1&RenovationID=1.6', 'Buy, 1-2rooms, 100k'),
+               ('https://www.myhome.ge/en/s/qiravdeba-bina-Tbilisi/?Keyword=Vake-Saburtalo&AdTypeID=3&PrTypeID=1&cities=1&districts=28.38.47&regions=4&CardView=2&FCurrencyID=1&FPriceFrom=1000&FPriceTo=1500&AreaSizeID=1&AreaSizeFrom=80&AreaSizeTo=150&BedRoomNums=2.3&FloorNums=notfirst.notlast&EstateTypeID=1&RoomNums=3.4', 'Rent, 1-1.8k, 80-180m')
+                        
            ''')
         conn.commit()
 

@@ -29,8 +29,10 @@ async def bot_schedule():
         urls = get_requests()
         for (url_id, url, description) in urls:
             new_flats = get_new_flats(url_id)
+            i = 1
             for flat in new_flats:
-                await run_bot(flat, description)
+                await run_bot(flat, description, len(new_flats), i)
+                i+=1
 
 
 if __name__ == "__main__":

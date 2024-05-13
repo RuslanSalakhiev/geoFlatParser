@@ -43,7 +43,7 @@ def format_difference(num1, num2):
     return formatted_difference
 
 
-async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description):
+async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i):
     size = float(item['size'].split()[0])
     price = float(item['price'].replace(',', ''))
     first_price = float(item['first_price'].replace(',', ''))
@@ -62,7 +62,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     date_object = datetime.strptime(item['date'], "%Y-%m-%d %H:%M:%S")
     formatted_date = date_object.strftime("%d.%m.%y")
 
-    text = f"<i>{url_description}</i> | ID: {item['id']}" \
+    text = f"<i>#{url_description}</i> | ID: {item['id']} | {i} / {total_cnt}" \
            f"\n\n<b>Date</b>: {formatted_date}" \
            f"\n<b>Price</b>: {price_string}" \
            f"\n<b>Price per Meter</b>: {ppm_string} " \
@@ -87,7 +87,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     while True:
         url = f"{base_url}{i}.{extension}"
         response = requests.head(url)
-        if response.status_code != 200 or i > 8:
+        if response.status_code != 200 or i > 10:
             break
         media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
         await asyncio.sleep(3)
@@ -95,7 +95,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     if media:
         try:
             sent_messages = await bot.send_media_group(chat_id=chat_id, caption=text, parse_mode='html', media=media)
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
             keyboard = InlineKeyboardMarkup([
@@ -112,13 +112,13 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
             print(f"An error occurred while retrieving the message: {e}")
 
 
-async def run_bot(item, url_description):
+async def run_bot(item, url_description, total_cnt, i):
     ppm30 = get_average_ppm('30')
     ppm90 = get_average_ppm('90')
     ppm_district = get_district_average_ppm(item['district'])
 
     logging.info(f'Send Message - {item["link"]}')
-    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description)
+    await send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_description,total_cnt, i)
 
 
 async def hide_message(message_id, item_id):
