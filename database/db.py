@@ -177,19 +177,13 @@ def get_new_flats(request_id):
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row  # Return dictionaries instead of tuples
     cursor = conn.cursor()
-
-    # Calculate yesterday's date in the format 'YYYY-MM-DD'
-    yesterday_date = (datetime.now() - timedelta(days=1, minutes=30))
-    # Update the SQL query to fetch flats that are not hidden, match the request_id,
-    # and were added on or after yesterday's date
     query = """
             SELECT * FROM flats 
             WHERE hide = 0 
             AND request_id = ?
             AND sent_to_tg = 0
-            AND date >= ?
         """
-    cursor.execute(query, (request_id, yesterday_date))
+    cursor.execute(query, (request_id, ))
 
     # Fetch all results that meet the criteria
     entries = cursor.fetchall()
