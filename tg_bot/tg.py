@@ -55,7 +55,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     date_object = datetime.strptime(item['date'], "%Y-%m-%d %H:%M:%S")
     formatted_date = date_object.strftime("%d.%m.%y")
 
-    text = f"<i>#{url_description}</i> | ID: {item['id']} | {i} / {total_cnt}" \
+    text = f"<i>#{url_description}</i> | #ID:{item['id']} | {i} / {total_cnt}" \
            f"\n\n<b>Date</b>: {formatted_date}" \
            f"\n<b>Price</b>: {price_string}" \
            f"\n<b>Price per Meter</b>: {ppm_string} " \
@@ -77,7 +77,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     if images_list:
         base_url = images_list[0].rsplit('_', 1)[0] + '_'
         extension = images_list[0].split('.')[-1]
-        
+
         while True:
             url = f"{base_url}{i}.{extension}"
             response = requests.head(url)
