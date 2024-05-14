@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from database.db import get_chat_from_db, get_new_flats, get_requests
-from tg_bot.tg import run_bot
+from tg_bot.tg import run_bot, send_summary_message
 from config import *
 
 
@@ -37,6 +37,8 @@ async def bot_schedule():
                 for flat in new_flats:
                     await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
                     i+=1
+
+            await send_summary_message(url_id,chat_id)
 
         if env == 'production':
             await sleep_until()

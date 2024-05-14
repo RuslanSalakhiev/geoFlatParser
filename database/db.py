@@ -126,7 +126,8 @@ def create_tables():
                 url TEXT,
                 description TEXT,
                 test_chat TEXT,
-                prod_chat TEXT
+                prod_chat TEXT,
+                like_message_id TEXT
             )
             ''')
 
@@ -417,6 +418,57 @@ def get_max_date(request_id):
             return datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
         else:
             return datetime.today() - timedelta(days=1)
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def get_like_message_id(request_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute(f"SELECT like_message_id FROM requests WHERE id = ?", (request_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchone()
+        return result[0]
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+async def update_like_message_id(request_id, message_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Execute the update query
+        cursor.execute(f'''
+                               UPDATE requests
+                               SET like_message_id = ?
+                               WHERE id = ?
+                               ''', (message_id, request_id,))
+
+        conn.commit()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        conn.close()
+
+
+def get_liked_flats(request_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute(f"SELECT id,price, district, size FROM flats WHERE request_id = ? and like = 1", (request_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchall()
+        return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3]} for row in result]
     except Exception as e:
         print(f"An error occurred while retrieving the message: {e}")
         return None

@@ -7,8 +7,8 @@ from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardB
 import asyncio
 from config import bot_token, test_bot_token
 from database.db import add_tg_message_to_db, dislike_flat, get_average_ppm, get_district_average_ppm, \
-    get_tg_message_by_id, \
-    hide_flat, like_flat, update_sent_status, update_tg_message_in_db
+    get_like_message_id, get_liked_flats, get_tg_message_by_id, \
+    hide_flat, like_flat, update_like_message_id, update_sent_status, update_tg_message_in_db
 import requests
 from telegram.ext import Application, CallbackQueryHandler,ContextTypes
 
@@ -89,7 +89,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     if media:
         try:
             await asyncio.sleep(2)
-            sent_messages = await bot.send_media_group(read_timeout=30, write_timeout=30, chat_id=chat_id, caption=text, parse_mode='html', media=media)
+            sent_messages = await bot.send_media_group(read_timeout=40, write_timeout=40, chat_id=chat_id, caption=text, parse_mode='html', media=media, connect_timeout=40)
             await asyncio.sleep(4)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
@@ -191,6 +191,22 @@ def listen_actions():
 
     # Start the bot
     application.run_polling()
+
+
+async def send_summary_message(request_id, chat_id):
+
+    liked_flats = get_liked_flats(request_id)
+    summary_lines = ["<b>Summary</b>\n", "❤:"]
+    for flat in liked_flats:
+        summary_lines.append(f"#ID{flat['id']}, {flat['district']}, {flat['price']}, {flat['size']}")
+
+    summary_string = "\n".join(summary_lines)
+    summary_message = await bot.send_message(chat_id=chat_id, text=summary_string, parse_mode='Html', read_timeout=15, write_timeout=15)
+    prev_message_id = get_like_message_id(request_id)
+    if prev_message_id:
+        await bot.delete_message(chat_id=chat_id, message_id=prev_message_id)
+    await update_like_message_id(request_id, summary_message.message_id)
+
 
 # async def run_test():
 #
