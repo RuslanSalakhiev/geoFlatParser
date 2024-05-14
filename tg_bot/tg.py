@@ -116,7 +116,7 @@ async def run_bot(item, url_description, total_cnt, i, chat_id,url_id ):
 
 
 async def hide_message(message_id, item_id, chat_id):
-    initial_text = get_tg_message_by_id(message_id)
+    initial_text = get_tg_message_by_id(message_id).replace('\n\n #Liked ❤❤❤', '')
     updated_text = f'<s>{initial_text}</s>'
 
     await hide_flat(item_id)
