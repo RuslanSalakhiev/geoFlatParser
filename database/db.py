@@ -402,3 +402,23 @@ async def update_sent_status(id):
     finally:
         # Close the connection
         conn.close()
+
+
+def get_max_date(request_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute(f"SELECT max(date) FROM flats WHERE request_id = ?", (request_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchone()
+        if result[0]:
+            return datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
+        else:
+            return datetime.today() - timedelta(days=1)
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()

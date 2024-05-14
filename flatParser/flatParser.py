@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from config import url_pattern, parse_days_count
-from database.db import get_new_flats, get_requests, update_flats
+from database.db import get_max_date, get_new_flats, get_requests, update_flats
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -72,7 +72,7 @@ def transliterate_and_clean(card, selector, default=''):
     return clean_address(transliterate_georgian(text))
 
 
-def parse_url(init_url):
+def parse_url(init_url, url_id):
     # chrome_options = Options()
     # chrome_options.binary_location = chrome_path  # Update this path
     # driver = webdriver.Chrome(options=chrome_options)
@@ -115,15 +115,13 @@ def parse_url(init_url):
 
             # check for today data
             date = datetime.strptime(card_date + " " + str(datetime.now().year), '%d %b %H:%M %Y')
-            today = datetime.today()
-            start_date = today - timedelta(days=parse_days_count)
+
+            max_date = get_max_date(url_id)
             logging.info(f"Link - {link}, Date - {date},  {'VIP' if is_vip_badge else ''}, ")
 
-            if date < start_date and not is_vip_badge:
+            if date <= max_date and not is_vip_badge:
                 actual_data = False
                 break
-
-            # Extract various pieces of data for each property listing
 
             images = card.findAll('img')
             images_list = [img.get('src').replace('thumbs', 'large') for img in images if img.get('src') is not None]
@@ -154,6 +152,6 @@ def parse_url(init_url):
 def run_parser():
     urls = get_requests()
     for url_id, url, descriptions in urls:
-        data = parse_url(url)
+        data = parse_url(url,url_id)
         update_flats(data, url_id)
 
