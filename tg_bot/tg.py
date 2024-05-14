@@ -72,19 +72,20 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     images = item['images']
     images_list = json.loads(images)
 
-    base_url = images_list[0].rsplit('_', 1)[0] + '_'
-    extension = images_list[0].split('.')[-1]
-
     media = []
     i = 1
-    while True:
-        url = f"{base_url}{i}.{extension}"
-        response = requests.head(url)
-        if response.status_code != 200 or i > 10:
-            break
-        media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
-        await asyncio.sleep(2)
-        i += 1
+    if images_list:
+        base_url = images_list[0].rsplit('_', 1)[0] + '_'
+        extension = images_list[0].split('.')[-1]
+        
+        while True:
+            url = f"{base_url}{i}.{extension}"
+            response = requests.head(url)
+            if response.status_code != 200 or i > 10:
+                break
+            media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
+            await asyncio.sleep(2)
+            i += 1
     if media:
         try:
             await asyncio.sleep(2)
