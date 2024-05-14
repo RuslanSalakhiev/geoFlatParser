@@ -88,7 +88,7 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     if media:
         try:
             await asyncio.sleep(2)
-            sent_messages = await bot.send_media_group(read_timeout=20,write_timeout=20, chat_id=chat_id, caption=text, parse_mode='html', media=media)
+            sent_messages = await bot.send_media_group(read_timeout=30, write_timeout=30, chat_id=chat_id, caption=text, parse_mode='html', media=media)
             await asyncio.sleep(4)
             message_id = sent_messages[0].message_id
             message = {'id': message_id, 'text': text}
