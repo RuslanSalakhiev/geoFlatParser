@@ -465,10 +465,10 @@ def get_liked_flats(request_id):
     cursor = conn.cursor()
     try:
         # Prepare the SQL query to fetch the message text by message ID
-        cursor.execute(f"SELECT id,price, district, size FROM flats WHERE request_id = ? and like = 1", (request_id,))
+        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and like = 1", (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchall()
-        return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3]} for row in result]
+        return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3],"date":row[4]} for row in result]
     except Exception as e:
         print(f"An error occurred while retrieving the message: {e}")
         return None

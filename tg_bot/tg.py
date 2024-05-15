@@ -197,8 +197,12 @@ async def send_summary_message(request_id, chat_id):
 
     liked_flats = get_liked_flats(request_id)
     summary_lines = ["<b>Summary</b>\n", "❤:"]
+
+
     for flat in liked_flats:
-        summary_lines.append(f"#ID{flat['id']}, {flat['district']}, {flat['price']}, {flat['size']}")
+        date_object = datetime.strptime(flat['date'], "%Y-%m-%d %H:%M:%S")
+        formatted_date = date_object.strftime("%d.%m")
+        summary_lines.append(f"#ID{flat['id']} | {flat['district']} | {flat['price']} | {flat['size']} | {formatted_date}")
 
     summary_string = "\n".join(summary_lines)
     summary_message = await bot.send_message(chat_id=chat_id, text=summary_string, parse_mode='Html', read_timeout=15, write_timeout=15)
