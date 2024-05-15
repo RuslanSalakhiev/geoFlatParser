@@ -38,7 +38,7 @@ async def bot_schedule():
                     await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
                     i+=1
 
-            await send_summary_message(url_id,chat_id)
+                await send_summary_message(url_id, chat_id)
 
         if env == 'production':
             await sleep_until()
