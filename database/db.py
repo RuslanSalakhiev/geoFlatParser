@@ -27,11 +27,18 @@ def update_flats(data, url_id):
             # Execute a query to check if a record with the same 'link' and other params already exists
             c.execute('''
                            SELECT COUNT(*) FROM flats 
-                           WHERE link = ? OR (size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
+                           WHERE link = ?
                        ''',
-                      (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district']))
+                      (item['link'],))
+            is_not_exist = c.fetchone()[0] == 0
+            c.execute('''
+                            SELECT COUNT(*) FROM flats 
+                            WHERE link <> ? and (size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
+                        ''',
+                      (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district'],))
+            is_unique = c.fetchone()[0] == 0
 
-            if c.fetchone()[0] == 0:  # If no existing record, the link is unique
+            if is_not_exist and is_unique:  # If no existing record, the link is unique
                 # Insert new record into the database since the link is unique
                 item['request_id'] = url_id
                 item['images'] = json.dumps(item["images_list"])
@@ -47,9 +54,9 @@ def update_flats(data, url_id):
                 ''', item)
                 logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
-
+            elif is_not_exist and not is_unique:
+                logging.info(f"FLATS: duplicate: {item['link']}")
             else:
-
                 current_year = datetime.now().year
                 dt = datetime.strptime(item['date'], '%d %b %H:%M')
                 dt = dt.replace(year=current_year)
