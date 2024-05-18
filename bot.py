@@ -36,7 +36,7 @@ async def bot_schedule():
             if len(new_flats) > 0:
                 for flat in new_flats:
                     await run_bot(flat, description, len(new_flats), i, chat_id,url_id)
-                    i+=1
+                    i += 1
 
                 await send_summary_message(url_id, chat_id)
 

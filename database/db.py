@@ -1,17 +1,26 @@
 import logging
 import json
+import os
 import sqlite3
 from datetime import datetime,timedelta
 
 DATABASE_PATH = 'flats.db'
 
 # Set up logging
+
+env = os.getenv('ENV', 'development')
+
+if env == 'production':
+    level = logging.WARNING
+else:
+    level = logging.INFO
+
 logging.basicConfig(
     filename='parser.log',
     filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.WARNING)
+    level=level)
 
 
 def update_flats(data, url_id):
@@ -37,9 +46,7 @@ def update_flats(data, url_id):
                         ''',
                       (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district'],))
             is_unique = c.fetchone()[0] == 0
-
-            if is_not_exist and is_unique:  # If no existing record, the link is unique
-                # Insert new record into the database since the link is unique
+            if is_not_exist and is_unique:
                 item['request_id'] = url_id
                 item['images'] = json.dumps(item["images_list"])
 
@@ -49,8 +56,8 @@ def update_flats(data, url_id):
                 item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 c.execute('''
-                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg ) 
-                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0,0  )
+                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg,seen ) 
+                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0,0, 0 )
                 ''', item)
                 logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
@@ -63,7 +70,7 @@ def update_flats(data, url_id):
                 item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 # Update the 'date' of the existing record where the link matches
-                c.execute('UPDATE flats SET date = ?, price=?, sent_to_tg = 0 WHERE link = ?',
+                c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
                           (item['parsed_date'], item['price'], item['link']))
                 logging.info(f"FLATS: Updated existing link: {item['link']}")
                 update_count += 1
@@ -122,7 +129,9 @@ def create_tables():
             request_id INTEGER,
             images TEXT,
             like INTEGER,
-            sent_to_tg INTEGER 
+            sent_to_tg INTEGER,
+            message_id INTEGER,
+            seen INTEGER 
         )
         ''')
 
@@ -256,7 +265,7 @@ async def hide_flat(flat_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     sql = f"""
-    UPDATE flats SET hide = 1 WHERE id = ?
+    UPDATE flats SET hide = 1, seen = 1, like = 0  WHERE id = ?
     """
 
     try:
@@ -276,7 +285,7 @@ async def like_flat(flat_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     sql = f"""
-    UPDATE flats SET like = 1 WHERE id = ?
+    UPDATE flats SET like = 1, seen = 1, hide=0 WHERE id = ?
     """
 
     try:
@@ -291,25 +300,6 @@ async def like_flat(flat_id):
         # Close the connection
         conn.close()
 
-
-async def dislike_flat(flat_id):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    sql = f"""
-    UPDATE flats SET like = 0 WHERE id = ?
-    """
-
-    try:
-        # Execute the query
-        cursor.execute(sql,  (flat_id,))
-        conn.commit()
-        return 'ok'
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return 'error'
-    finally:
-        # Close the connection
-        conn.close()
 
 async def add_tg_message_to_db(message):
     conn = sqlite3.connect(DATABASE_PATH)
@@ -393,16 +383,17 @@ def get_chat_from_db(request_id, env):
         conn.close()
 
 
-async def update_sent_status(id):
+async def update_sent_status(flat_id, message):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
         # Execute the update query
         cursor.execute(f'''
                            UPDATE flats
-                           SET sent_to_tg = 1
+                           SET sent_to_tg = 1,
+                           message_id = ?
                            WHERE id = ?
-                           ''', (id,) )
+                           ''', (message['id'], flat_id,) )
 
         conn.commit()
     except Exception as e:
@@ -473,6 +464,22 @@ def get_liked_flats(request_id):
     try:
         # Prepare the SQL query to fetch the message text by message ID
         cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and like = 1", (request_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchall()
+        return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3],"date":row[4]} for row in result]
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def get_unseen_flats(request_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0", (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchall()
         return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3],"date":row[4]} for row in result]

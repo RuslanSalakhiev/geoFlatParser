@@ -81,7 +81,8 @@ def parse_url(init_url, url_id):
     data = []
     page = 1
     actual_data = True
-    logging.info('Start parsing')
+    max_date = get_max_date(url_id)
+    logging.info(f'Start parsing, max-date: {max_date} url: {init_url}')
 
     while actual_data:
         logging.info(f'Page - {page}')
@@ -116,7 +117,7 @@ def parse_url(init_url, url_id):
             # check for today data
             date = datetime.strptime(card_date + " " + str(datetime.now().year), '%d %b %H:%M %Y')
 
-            max_date = get_max_date(url_id)
+
             logging.info(f"Link - {link}, Date - {date},  {'VIP' if is_vip_badge else ''}, ")
 
             if date <= max_date and not is_vip_badge:
