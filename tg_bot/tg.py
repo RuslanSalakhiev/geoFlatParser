@@ -91,23 +91,40 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
             await asyncio.sleep(2)
             i += 1
     if media:
-        try:
-            await asyncio.sleep(2)
-            sent_messages = await bot.send_media_group(read_timeout=40, write_timeout=40, chat_id=chat_id, caption=text, parse_mode='html', media=media, connect_timeout=40)
-            await asyncio.sleep(4)
-            message_id = sent_messages[0].message_id
-            message = {'id': message_id, 'text': text}
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("Link", url=item['link']),
-                 InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}_{chat_id}")],
-                [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}_{chat_id}")]
-            ])
-            await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard, read_timeout=15,write_timeout=15)
-            await add_tg_message_to_db(message)
-            await update_sent_status(item['id'],message)
-            await asyncio.sleep(3)
-        except Exception as e:
-            print(f"An error occurred while retrieving the message: {e}")
+        retries = 3
+        for attempt in range(retries):
+            try:
+                await asyncio.sleep(2)
+                sent_messages = await bot.send_media_group(read_timeout=40, write_timeout=40, chat_id=chat_id, caption=text, parse_mode='html', media=media, connect_timeout=40)
+                await asyncio.sleep(4)
+                message_id = sent_messages[0].message_id
+                message = {'id': message_id, 'text': text}
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Link", url=item['link']),
+                     InlineKeyboardButton("🫣 Hide", callback_data=f"hide_{item['id']}_{message_id}_{chat_id}")],
+                    [InlineKeyboardButton("❤️ Like", callback_data=f"like_{item['id']}_{message_id}_{chat_id}")]
+                ])
+                await add_tg_message_to_db(message)
+                await update_sent_status(item['id'], message)
+
+                actions_retries = 3
+                for actions_attempt in range(actions_retries):
+                    try:
+                        await bot.send_message(chat_id=chat_id, text="Actionsㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ", parse_mode='html', reply_markup=keyboard, read_timeout=15,write_timeout=15)
+                        break
+                    except Exception as e:
+                        print(f"An error occurred while sending the message (attempt {actions_attempt + 1}/{actions_retries}): {e}")
+                        if actions_attempt < actions_retries - 1:
+                            await asyncio.sleep(5)  # wait before retrying
+                        else:
+                            print("Failed to send the message after multiple attempts.")
+
+                await asyncio.sleep(3)
+                break
+            except Exception as e:
+                if attempt < retries - 1:
+                    await asyncio.sleep(5)
+                print(f"An error occurred while sending the message: {e}")
 
 
 async def run_bot(item, url_description, total_cnt, i, chat_id,url_id ):
