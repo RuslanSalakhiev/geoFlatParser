@@ -420,7 +420,7 @@ def get_max_date(request_id):
         if result[0]:
             return datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
         else:
-            return datetime.today() - timedelta(days=1)
+            return datetime.today() - timedelta(days=7)
     except Exception as e:
         print(f"An error occurred while retrieving the message: {e}")
         return None
