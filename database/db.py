@@ -42,7 +42,7 @@ def update_flats(data, url_id):
             is_not_exist = c.fetchone()[0] == 0
             c.execute('''
                             SELECT COUNT(*) FROM flats 
-                            WHERE link <> ? and (size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
+                            WHERE link <> ? and (bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
                         ''',
                       (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district'],))
             is_unique = c.fetchone()[0] == 0
