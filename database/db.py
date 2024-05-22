@@ -2,7 +2,7 @@ import logging
 import json
 import os
 import sqlite3
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 
 DATABASE_PATH = 'flats.db'
 
@@ -42,7 +42,7 @@ def update_flats(data, url_id):
             is_not_exist = c.fetchone()[0] == 0
             c.execute('''
                             SELECT COUNT(*) FROM flats 
-                            WHERE link <> ? and (bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
+                            WHERE link <> ? and (size= ? and bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?))
                         ''',
                       (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district'],))
             is_unique = c.fetchone()[0] == 0
@@ -66,8 +66,16 @@ def update_flats(data, url_id):
                 ''', item)
                 logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
-            elif is_not_exist and not is_unique :
+            elif is_not_exist and not is_unique:
                 logging.info(f"FLATS: duplicate, item skipped: {item['link']}")
+                print('duplicate')
+                c.execute('''
+                               UPDATE flats
+                               SET duplicates = ? 
+                               WHERE link <> ? and size= ? and bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?)
+                           ''',
+                   (item['link'] + '||', item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'],
+                    item['district'],))
             else:
                 current_year = datetime.now().year
                 dt = datetime.strptime(item['date'], '%d %b %H:%M')
@@ -136,7 +144,8 @@ def create_tables():
             like INTEGER,
             sent_to_tg INTEGER,
             message_id INTEGER,
-            seen INTEGER 
+            seen INTEGER,
+            duplicates TEXT 
         )
         ''')
 
@@ -205,7 +214,7 @@ def get_new_flats(request_id):
             AND request_id = ?
             AND sent_to_tg = 0
         """
-    cursor.execute(query, (request_id, ))
+    cursor.execute(query, (request_id,))
 
     # Fetch all results that meet the criteria
     entries = cursor.fetchall()
@@ -275,7 +284,7 @@ async def hide_flat(flat_id):
 
     try:
         # Execute the query
-        cursor.execute(sql,  (flat_id,))
+        cursor.execute(sql, (flat_id,))
         conn.commit()
         return 'ok'
     except Exception as e:
@@ -295,7 +304,7 @@ async def like_flat(flat_id):
 
     try:
         # Execute the query
-        cursor.execute(sql,  (flat_id,))
+        cursor.execute(sql, (flat_id,))
         conn.commit()
         return 'ok'
     except Exception as e:
@@ -398,7 +407,7 @@ async def update_sent_status(flat_id, message):
                            SET sent_to_tg = 1,
                            message_id = ?
                            WHERE id = ?
-                           ''', (message['id'], flat_id,) )
+                           ''', (message['id'], flat_id,))
 
         conn.commit()
     except Exception as e:
@@ -468,10 +477,11 @@ def get_liked_flats(request_id):
     cursor = conn.cursor()
     try:
         # Prepare the SQL query to fetch the message text by message ID
-        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and like = 1", (request_id,))
+        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and like = 1",
+                       (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchall()
-        return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3],"date":row[4]} for row in result]
+        return [{"id": row[0], "price": row[1], "district": row[2], "size": row[3], "date": row[4]} for row in result]
     except Exception as e:
         print(f"An error occurred while retrieving the message: {e}")
         return None
@@ -484,10 +494,11 @@ def get_unseen_flats(request_id):
     cursor = conn.cursor()
     try:
         # Prepare the SQL query to fetch the message text by message ID
-        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0", (request_id,))
+        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0",
+                       (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchall()
-        return [{"id":row[0],"price":row[1], "district":row[2], "size":row[3],"date":row[4]} for row in result]
+        return [{"id": row[0], "price": row[1], "district": row[2], "size": row[3], "date": row[4]} for row in result]
     except Exception as e:
         print(f"An error occurred while retrieving the message: {e}")
         return None
