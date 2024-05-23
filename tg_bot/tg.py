@@ -215,6 +215,7 @@ async def send_summary_message(request_id, chat_id):
     prev_message_id = get_like_message_id(request_id)
     if prev_message_id:
         await bot.delete_message(chat_id=chat_id, message_id=prev_message_id)
+    await asyncio.sleep(2)
     await update_like_message_id(request_id, summary_message.message_id)
 
 
