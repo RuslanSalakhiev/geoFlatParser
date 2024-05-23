@@ -118,6 +118,8 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
                             await asyncio.sleep(5)  # wait before retrying
                         else:
                             print("Failed to send the message after multiple attempts.")
+                    finally:
+                        await asyncio.sleep(2)
 
                 await asyncio.sleep(3)
                 break
@@ -125,6 +127,8 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
                 print(f"An error occurred while sending the message: {e}")
+            finally:
+                await asyncio.sleep(2)
 
 
 async def run_bot(item, url_description, total_cnt, i, chat_id,url_id ):
