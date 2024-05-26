@@ -87,7 +87,8 @@ def parse_url(init_url, url_id):
     while actual_data:
         logging.info(f'Page - {page}')
         # Navigate to the given URL
-        url = init_url + '&Page=' + str(page)
+        url = init_url + '&page=' + str(page)
+        logging.info(f' url: {url}')
         driver.get(url)
         driver.implicitly_wait(10)
 
