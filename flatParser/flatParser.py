@@ -105,14 +105,17 @@ def parse_url(init_url, url_id):
         all_cards = catalog_xml.findAll('a', href=regex_url_pattern)
 
         logging.info(f'Total cards - {len(all_cards)}')
+        no_data = len(all_cards) == 0
+        if no_data:
+            actual_data = False
+            break
 
         for card in all_cards:
-
             link = card.get('href')
             card_date = get_text(card,
                                  "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > div > span")
 
-            is_vip_badge = bool(card.select('[class^="SuperVipIcon"], [class^="VipPlusIcon"],  [class^="VipIcon"]'))
+            is_vip_badge = bool(card.select('[class^="is_super_vip"], [class^="is_vip_plus"],  [class^="is_vip_"]'))
 
             # check for today data
             date = datetime.strptime(card_date + " " + str(datetime.now().year), '%d %b %H:%M %Y')
@@ -120,7 +123,7 @@ def parse_url(init_url, url_id):
 
             logging.info(f"Link - {link}, Date - {date},  {'VIP' if is_vip_badge else ''}, ")
 
-            if date <= max_date and not is_vip_badge:
+            if date <= max_date and not is_vip_badge :
                 actual_data = False
                 break
 

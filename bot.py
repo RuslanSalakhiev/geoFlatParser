@@ -25,7 +25,7 @@ async def sleep_until():
 async def bot_schedule():
     while True:
         env = os.getenv('ENV', 'development')
-
+        await asyncio.sleep(1000) 
         urls = get_requests()
         for (url_id, url, description) in urls:
             new_flats = get_new_flats(url_id)
