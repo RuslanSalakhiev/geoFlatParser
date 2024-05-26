@@ -92,6 +92,7 @@ def parse_url(init_url, url_id):
         driver.get(url)
         script = """
         window.localStorage.setItem('currency', 'usd');
+        location.reload();
         """
         driver.execute_script(script)
         driver.implicitly_wait(10)
@@ -150,7 +151,6 @@ def parse_url(init_url, url_id):
                 "address": transliterate_and_clean(card, "div.w-full.px-5 > div.mt-3.line-clamp-1 > div > p"),
                 "images_list": images_list
             }
-
             data.append(entity)
 
         page += 1
