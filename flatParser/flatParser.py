@@ -90,6 +90,10 @@ def parse_url(init_url, url_id):
         url = init_url + '&page=' + str(page)
         logging.info(f' url: {url}')
         driver.get(url)
+        script = """
+        window.localStorage.setItem('currency', 'usd');
+        """
+        driver.execute_script(script)
         driver.implicitly_wait(10)
 
         WebDriverWait(driver, 10).until(
@@ -132,7 +136,7 @@ def parse_url(init_url, url_id):
             images_list = [img.get('src').replace('thumbs', 'large') for img in images if img.get('src') is not None]
 
             entity = {
-                "link": link,
+                "link": 'https://www.myhome.ge'+ link,
                 "date": card_date,
                 "district": transliterate_and_clean(card,
                                                     "div.w-full.px-5 > div:nth-child(5) > div.flex.justify-between.break-all.h-6.mt-3 > span"),

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
@@ -79,17 +80,29 @@ async def send_flat_to_telegram(item, ppm30, ppm90, ppm_district, url_descriptio
     media = []
     i = 1
     if images_list:
-        base_url = images_list[0].rsplit('_', 1)[0] + '_'
-        extension = images_list[0].split('.')[-1]
 
-        while True:
-            url = f"{base_url}{i}.{extension}"
-            response = requests.head(url)
-            if response.status_code != 200 or i > 10:
-                break
-            media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
+        img_type = re.search(r'\.[^.]+$', images_list[0]).group()
+
+        if img_type != '.webp':
+
+            base_url = images_list[0].rsplit('_', 1)[0] + '_'
+            extension = images_list[0].split('.')[-1]
+
+            while True:
+                url = f"{base_url}{i}.{extension}"
+                response = requests.head(url)
+                if response.status_code != 200 or i > 10:
+                    break
+                media.append(InputMediaPhoto(media=url.replace('large', 'thumbs')))
+                await asyncio.sleep(2)
+                i += 1
+        else:
+            media.append(InputMediaPhoto(media=images_list[0]))
             await asyncio.sleep(2)
-            i += 1
+            media.append(InputMediaPhoto(media=images_list[1]))
+            await asyncio.sleep(2)
+
+
     if media:
         retries = 3
         for attempt in range(retries):
@@ -217,8 +230,13 @@ async def send_summary_message(request_id, chat_id):
     summary_string = "\n".join(summary_lines)
     summary_message = await bot.send_message(chat_id=chat_id, text=summary_string, parse_mode='Html', read_timeout=15, write_timeout=15)
     prev_message_id = get_like_message_id(request_id)
+    await asyncio.sleep(2)
     if prev_message_id:
-        await bot.delete_message(chat_id=chat_id, message_id=prev_message_id)
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=prev_message_id)
+        except Exception as e:
+            print(f"An error occurred while sending the message: {e}")
+
     await asyncio.sleep(2)
     await update_like_message_id(request_id, summary_message.message_id)
 
