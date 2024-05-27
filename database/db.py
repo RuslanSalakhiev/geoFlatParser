@@ -47,10 +47,13 @@ def update_flats(data, url_id):
                       (item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'], item['district'],))
             is_unique = c.fetchone()[0] == 0
 
-            no_address = item['address'].lower() == item['district'].lower()
+            no_address = item['address'].lower() == item['district'].lower() or item['address'] == ' mititebuli ar aris'
+            stop_address = 'zhvania' in item['address'].lower()
 
             if no_address:
                 logging.info(f"FLATS:No address, item skipped: {item['link']}")
+            elif stop_address:
+                logging.info(f"FLATS:stop address, item skipped: {item['link']}")
             elif is_not_exist and is_unique:
                 item['request_id'] = url_id
                 item['images'] = json.dumps(item["images_list"])
