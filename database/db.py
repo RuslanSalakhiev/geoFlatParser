@@ -50,18 +50,20 @@ def update_flats(data, url_id):
             no_address = item['address'].lower() == item['district'].lower() or item['address'] == ' mititebuli ar aris'
             stop_address = 'zhvania' in item['address'].lower()
 
+            item['request_id'] = url_id
+            item['images'] = json.dumps(item["images_list"])
+
+            current_year = datetime.now().year
+            dt = datetime.strptime(item['date'], '%d %b %H:%M')
+            dt = dt.replace(year=current_year)
+            item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+
             if no_address:
                 logging.info(f"FLATS:No address, item skipped: {item['link']}")
             elif stop_address:
                 logging.info(f"FLATS:stop address, item skipped: {item['link']}")
             elif is_not_exist and is_unique:
-                item['request_id'] = url_id
-                item['images'] = json.dumps(item["images_list"])
 
-                current_year = datetime.now().year
-                dt = datetime.strptime(item['date'], '%d %b %H:%M')
-                dt = dt.replace(year=current_year)
-                item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 c.execute('''
                 INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg,seen ) 
@@ -72,19 +74,27 @@ def update_flats(data, url_id):
             elif is_not_exist and not is_unique:
                 logging.info(f"FLATS: duplicate, item skipped: {item['link']}")
                 print('duplicate')
-                c.execute('''
-                               UPDATE flats
-                               SET duplicates = ? 
-                               WHERE link <> ? and size= ? and bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?)
-                           ''',
-                   (item['link'] + '||', item['link'], item['size'], item['bedrooms'], item['rooms'], item['floor'],
-                    item['district'],))
-            else:
-                current_year = datetime.now().year
-                dt = datetime.strptime(item['date'], '%d %b %H:%M')
-                dt = dt.replace(year=current_year)
-                item['parsed_date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
 
+                c.execute('''
+                    UPDATE flats
+                    SET duplicates = CASE
+                        WHEN duplicates IS NULL THEN ?
+                        ELSE duplicates || ?
+                    END,
+                    date = ?
+                    WHERE link <> ? AND size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?)
+                ''', (
+                    item['link'] + '||',  # For NULL case
+                    item['link'] + '||',  # For concatenation
+                    item['parsed_date'],
+                    item['link'],
+                    item['size'],
+                    item['bedrooms'],
+                    item['rooms'],
+                    item['floor'],
+                    item['district'],
+                ))
+            else:
                 # Update the 'date' of the existing record where the link matches
                 c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
                           (item['parsed_date'], item['price'], item['link']))
@@ -95,7 +105,7 @@ def update_flats(data, url_id):
 
     except Exception as e:
         logging.error("An error occurred: {}".format(e))
-
+        print('error???', item)
         logging.info(
             f"Total inserts: {insert_count}, Total updates: {update_count}")
     finally:
@@ -425,8 +435,8 @@ def get_max_date(request_id):
     cursor = conn.cursor()
 
     try:
-        # Prepare the SQL query to fetch the message text by message ID
-        cursor.execute(f"SELECT max(date) FROM flats WHERE request_id = ?", (request_id,))
+        now = datetime.now()
+        cursor.execute(f"SELECT max(date) FROM flats WHERE request_id = ? AND date < ?", (request_id, now))
         # Fetch the first row from the query result
         result = cursor.fetchone()
         if result[0]:
