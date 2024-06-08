@@ -8,8 +8,9 @@ from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardB
 import asyncio
 from config import bot_token, test_bot_token
 from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, \
-    get_like_message_id, get_liked_flats, get_tg_message_by_id, \
-    get_unseen_flats, hide_flat, like_flat, update_like_message_id, update_sent_status, update_tg_message_in_db
+    get_like_message_id, get_liked_flats, get_parser_stats, get_tg_message_by_id, \
+    get_unseen_flats, hide_flat, like_flat, update_like_message_id, update_sent_status, \
+    update_tg_message_in_db
 import requests
 from telegram.ext import Application, CallbackQueryHandler,ContextTypes
 
@@ -218,7 +219,13 @@ def listen_actions():
 async def send_summary_message(request_id, chat_id):
     unseen_flats = get_unseen_flats(request_id)
     liked_flats = get_liked_flats(request_id)
-    summary_lines = ["<b>Summary</b>\n", "Liked ❤"]
+
+    new_uniq_flats = get_parser_stats(request_id, 0)
+    new_duplicates_flats =  get_parser_stats(request_id, 1)
+    summary_lines = ["<b>Summary</b>\n",f"Parser: New - {new_uniq_flats}, Duplicates: {new_duplicates_flats}\n\n"]
+
+
+    summary_lines.append("Liked ❤")
 
     for flat in liked_flats:
         date_object = datetime.strptime(flat['date'], "%Y-%m-%d %H:%M:%S")

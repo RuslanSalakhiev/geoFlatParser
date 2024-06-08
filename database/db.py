@@ -2,7 +2,7 @@ import logging
 import json
 import os
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,time
 
 DATABASE_PATH = 'flats.db'
 
@@ -52,6 +52,7 @@ def update_flats(data, url_id):
 
             item['request_id'] = url_id
             item['images'] = json.dumps(item["images_list"])
+            item['add_date'] =  datetime.now()
 
             current_year = datetime.now().year
             dt = datetime.strptime(item['date'], '%d %b %H:%M')
@@ -66,34 +67,19 @@ def update_flats(data, url_id):
 
 
                 c.execute('''
-                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg,seen ) 
-                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0,0, 0 )
+                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg,seen,duplicates,add_date ) 
+                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0,0, 0,0,:add_date )
                 ''', item)
                 logging.info(f"FLATS: Inserted in DB: {item['link']}")
                 insert_count += 1
             elif is_not_exist and not is_unique:
-                logging.info(f"FLATS: duplicate, item skipped: {item['link']}")
+                logging.info(f"FLATS: duplicate: {item['link']}")
                 print('duplicate')
 
                 c.execute('''
-                    UPDATE flats
-                    SET duplicates = CASE
-                        WHEN duplicates IS NULL THEN ?
-                        ELSE duplicates || ?
-                    END,
-                    date = ?
-                    WHERE link <> ? AND size = ? AND bedrooms = ? AND rooms = ? AND floor = ? AND LOWER(district) = LOWER(?)
-                ''', (
-                    item['link'] + '||',  # For NULL case
-                    item['link'] + '||',  # For concatenation
-                    item['parsed_date'],
-                    item['link'],
-                    item['size'],
-                    item['bedrooms'],
-                    item['rooms'],
-                    item['floor'],
-                    item['district'],
-                ))
+                                INSERT INTO flats (link, date,first_date, district, price,first_price, floor, rooms, bedrooms, size, address, hide, request_id, images, like, sent_to_tg,seen,duplicates, add_date ) 
+                                VALUES (:link, :parsed_date,:parsed_date, :district, :price,:price, :floor, :rooms, :bedrooms, :size, :address, 0,:request_id,:images, 0,1, 0,1,:add_date )
+                                ''', item)
             else:
                 # Update the 'date' of the existing record where the link matches
                 c.execute('UPDATE flats SET date = ?, price=? WHERE link = ?',
@@ -142,6 +128,7 @@ def create_tables():
             id INTEGER PRIMARY KEY,
             link TEXT,
             date TEXT,
+            add_date TEXT,
             first_date TEXT,
             district TEXT,
             first_price TEXT,
@@ -226,6 +213,7 @@ def get_new_flats(request_id):
             WHERE hide = 0 
             AND request_id = ?
             AND sent_to_tg = 0
+            AND duplicates = 0
         """
     cursor.execute(query, (request_id,))
 
@@ -245,7 +233,7 @@ def get_average_ppm(days, url_id):
     sql = f"""
     SELECT ROUND(AVG(cast(replace(price, ',','.') as float) * 10000 / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL)))/10 as average_price
     FROM flats
-    WHERE date >= date('now',  ?) AND request_id = ?
+    WHERE date >= date('now',  ?) AND request_id = ? AND duplicates = 0
     """
 
     try:
@@ -270,7 +258,7 @@ def get_district_average_ppm(district, url_id):
     sql = f"""
     SELECT ROUND(AVG(cast(replace(price, ',','.') as float) / CAST(SUBSTR(size, 1, INSTR(size, ' m²') - 1) AS REAL))* 10000)/10 as average_price
     FROM flats
-    WHERE LOWER(district) = LOWER(?) and request_id = ?
+    WHERE LOWER(district) = LOWER(?) and request_id = ? AND duplicates = 0
     """
 
     try:
@@ -507,11 +495,34 @@ def get_unseen_flats(request_id):
     cursor = conn.cursor()
     try:
         # Prepare the SQL query to fetch the message text by message ID
-        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0",
+        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0 AND duplicates <> 0",
                        (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchall()
         return [{"id": row[0], "price": row[1], "district": row[2], "size": row[3], "date": row[4]} for row in result]
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def get_parser_stats(request_id, is_duplicate):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        start_of_day = datetime.combine(datetime.now().date(), time.min)
+
+        cursor.execute("""
+                    SELECT count(*) 
+                    FROM flats 
+                    WHERE request_id = ? AND duplicates = ? AND add_date > ?
+                """, (request_id, is_duplicate, start_of_day))
+        # Fetch the first row from the query result
+        result = cursor.fetchone()
+        return result[0]
     except Exception as e:
         print(f"An error occurred while retrieving the message: {e}")
         return None
