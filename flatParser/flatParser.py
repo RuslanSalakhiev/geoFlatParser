@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from config import url_pattern, parse_days_count
-from database.db import get_max_date, get_new_flats, get_requests, update_flats
+from database.db import get_description, get_max_date, get_new_flats, get_requests, update_flats
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -77,12 +77,11 @@ def parse_url(init_url, url_id):
     # chrome_options.binary_location = chrome_path  # Update this path
     # driver = webdriver.Chrome(options=chrome_options)
     driver = get_chrome_headless()
-
     data = []
     page = 1
     actual_data = True
     max_date = get_max_date(url_id)
-    logging.info(f'Start parsing, max-date: {max_date} url: {init_url}')
+    logging.info(f'Start parsing ({url_id} / {get_description(url_id)}), max-date: {max_date} url: {init_url}')
 
     while actual_data:
         logging.info(f'Page - {page}')
