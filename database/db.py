@@ -495,7 +495,7 @@ def get_unseen_flats(request_id):
     cursor = conn.cursor()
     try:
         # Prepare the SQL query to fetch the message text by message ID
-        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0 AND duplicates <> 0",
+        cursor.execute(f"SELECT id,price, district, size,date FROM flats WHERE request_id = ? and seen = 0 AND duplicates = 0",
                        (request_id,))
         # Fetch the first row from the query result
         result = cursor.fetchall()
