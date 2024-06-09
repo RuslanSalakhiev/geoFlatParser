@@ -7,7 +7,7 @@ from datetime import datetime
 from telegram import Bot, InputMediaPhoto, InlineKeyboardMarkup, InlineKeyboardButton, Update
 import asyncio
 from config import bot_token, test_bot_token
-from database.db import add_tg_message_to_db, get_average_ppm, get_district_average_ppm, \
+from database.db import add_tg_message_to_db, get_average_ppm, get_description, get_district_average_ppm, \
     get_like_message_id, get_liked_flats, get_parser_stats, get_tg_message_by_id, \
     get_unseen_flats, hide_flat, like_flat, update_like_message_id, update_sent_status, \
     update_tg_message_in_db
@@ -222,8 +222,9 @@ async def send_summary_message(request_id, chat_id):
 
     new_uniq_flats = get_parser_stats(request_id, 0)
     new_duplicates_flats =  get_parser_stats(request_id, 1)
-    summary_lines = ["<b>Summary</b>\n",f"Parser: New - {new_uniq_flats}, Duplicates: {new_duplicates_flats}\n\n"]
 
+    description = get_description(request_id)
+    summary_lines = [f"<b>Summary</b> #{description}\n",f"Parser: New - {new_uniq_flats}, Duplicates: {new_duplicates_flats}\n"]
 
     summary_lines.append("Liked ❤")
 

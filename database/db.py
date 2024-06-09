@@ -528,3 +528,20 @@ def get_parser_stats(request_id, is_duplicate):
         return None
     finally:
         conn.close()
+
+def get_description(request_id):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    print(request_id)
+    try:
+        # Prepare the SQL query to fetch the message text by message ID
+        cursor.execute(f"SELECT description FROM requests WHERE id = ?",
+                       (request_id,))
+        # Fetch the first row from the query result
+        result = cursor.fetchone()
+        return result[0]
+    except Exception as e:
+        print(f"An error occurred while retrieving the message: {e}")
+        return None
+    finally:
+        conn.close()
